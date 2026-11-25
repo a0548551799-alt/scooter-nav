@@ -199,6 +199,13 @@ body.riding #searchBar,body.riding .results{display:none}
 .btn.go.riding{background:var(--red);border-color:var(--red)}
 .hint{font-size:12.5px;color:var(--muted);text-align:center;margin:6px 0 0}
 .summary{margin:2px 0 8px}
+
+/* Upgraded features styles */
+.me-arrow{width:28px;height:28px;display:grid;place-items:center;transition:transform .2s ease}
+.me-arrow svg{filter:drop-shadow(0 2px 4px #0008)}
+.fab.park-now{background:#1d4ed8;color:#fff;font-weight:800;font-size:15px}
+.hbtn.app-open{background:#0284c7;border-color:#0284c7;color:#fff;font-size:13px;padding:0 10px}
+
 /* ---- phone fit ---- */
 html,body{overscroll-behavior:none}
 button,.btn,.chip,.tab,.fab,.hbtn,.sbtn,.link{touch-action:manipulation;-webkit-user-select:none;user-select:none}
@@ -232,6 +239,7 @@ button,.btn,.chip,.tab,.fab,.hbtn,.sbtn,.link{touch-action:manipulation;-webkit-
       <span>ניווט קורקינט</span>
     </div>
     <button id="coBtn" class="hbtn" type="button" aria-haspopup="true" aria-expanded="false"><span id="coName">Bird</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    <button id="openAppBtn" class="hbtn app-open" type="button" title="פתח אפליקציית קורקינט">פתח אפליקציה ↗</button>
     <button id="menuBtn" class="hbtn icon" type="button" aria-label="תפריט: מחירים, חוקים, עריכה, הגדרות"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
   <div class="chips" id="chips" role="group" aria-label="בחירת חברה" hidden></div>
@@ -253,6 +261,7 @@ button,.btn,.chip,.tab,.fab,.hbtn,.sbtn,.link{touch-action:manipulation;-webkit-
     <button class="fab" id="editFab" type="button" aria-label="עדכן אזור / הוסף חניה" title="עדכן אזור / הוסף חניה">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M4 20l1-5L16 4l4 4L9 19z"/><path d="M13.5 6.5l4 4"/></svg>
     </button>
+    <button class="fab park-now" id="nearPBtn" type="button" aria-label="מצא חניה P קרובה עכשיו" title="מצא חניה P קרובה עכשיו">P</button>
   </div>
   <div id="gpsBadge">GPS כבוי</div>
   <div id="zoneChip" role="status"></div>
@@ -606,15 +615,37 @@ $('originPick').addEventListener('click',()=>setMode('origin'));
 $('destPick').addEventListener('click',()=>setMode('dest'));
 const curOrigin=()=>origin.gps?gps:origin.ll;
 
-/* search */
-async function doSearch(){const q=$('q').value.trim();if(!q)return;$('results').innerHTML='<div class="note">מחפש…</div>';
-  try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&countrycodes=il&accept-language=he&q='+encodeURIComponent(q));const j=await r.json();
-    if(!j.length){$('results').innerHTML='<div class="note">לא נמצאו תוצאות</div>';return}
-    $('results').innerHTML=j.map(x=>`<button type="button" data-act="res" data-lat="${+x.lat}" data-lng="${+x.lon}" data-name="${esc(x.display_name.split(',').slice(0,3).join(','))}">${esc(x.display_name)}</button>`).join('');
-  }catch(e){$('results').innerHTML='<div class="note">החיפוש לא זמין כרגע — בחר יעד במפה.</div>'}}
-$('qBtn').addEventListener('click',doSearch);
-$('searchBar').addEventListener('submit',e=>{e.preventDefault();doSearch()});
-$('q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doSearch()}});
+/* search (Photon + Nominatim live autocomplete) */
+let searchTimer=null;
+async function doSearch(isAuto){const q=$('q').value.trim();if(q.length<2){$('results').innerHTML='';return}
+  if(!isAuto)$('results').innerHTML='<div class="note">מחפש…</div>';
+  const ref=curOrigin()||[32.080,34.820];
+  try{
+    const r=await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${ref[0]}&lon=${ref[1]}&limit=6`);
+    const j=await r.json();
+    const feats=(j.features||[]).filter(f=>!f.properties.countrycode||f.properties.countrycode==='IL');
+    if(feats.length){
+      $('results').innerHTML=feats.map(f=>{
+        const p=f.properties,c=f.geometry.coordinates;
+        const main=[p.name,p.street&&p.housenumber?p.street+' '+p.housenumber:p.street].filter(Boolean).join(', ');
+        const sub=[p.city||p.town||p.village,p.district].filter(Boolean).join(', ');
+        const label=[main,sub].filter(Boolean).join(' · ')||q;
+        return `<button type="button" data-act="res" data-lat="${c[1]}" data-lng="${c[0]}" data-name="${esc(label)}"><b>${esc(main||label)}</b>${sub?'<br><small style="color:var(--muted)">'+esc(sub)+'</small>':''}</button>`;
+      }).join('');
+      return;
+    }
+  }catch(e){}
+  try{
+    const r2=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=il&accept-language=he&q='+encodeURIComponent(q));
+    const j2=await r2.json();
+    if(!j2.length){if(!isAuto)$('results').innerHTML='<div class="note">לא נמצאו תוצאות</div>';return}
+    $('results').innerHTML=j2.map(x=>`<button type="button" data-act="res" data-lat="${+x.lat}" data-lng="${+x.lon}" data-name="${esc(x.display_name.split(',').slice(0,3).join(','))}">${esc(x.display_name)}</button>`).join('');
+  }catch(e){if(!isAuto)$('results').innerHTML='<div class="note">החיפוש לא זמין כרגע — בחר יעד במפה.</div>'}
+}
+$('qBtn').addEventListener('click',()=>doSearch(false));
+$('searchBar').addEventListener('submit',e=>{e.preventDefault();doSearch(false)});
+$('q').addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>doSearch(true),350)});
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();clearTimeout(searchTimer);doSearch(false)}});
 
 /* ================= map click ================= */
 map.on('click',e=>{const ll=[e.latlng.lat,e.latlng.lng];
@@ -660,8 +691,22 @@ function compute(quiet){
   }
   const r=plan(o,fin);
   if(!r){toast('לא נמצא מסלול שעוקף את האזורים האדומים');return}
-  route={pts:r.pts,fixed:false,tm:'bicycling'};
+  route={pts:r.pts,streetPts:null,streetDist:null,streetDur:null,fixed:false,tm:'bicycling'};
   drawRoute(r.notes.concat(notes,slowNotes(r.pts)),r.detour);
+  fetchOsrmRoute(r.pts,r.notes.concat(notes,slowNotes(r.pts)),r.detour);
+}
+async function fetchOsrmRoute(wps,notes,detour){
+  try{
+    const coords=wps.map(p=>p[1].toFixed(6)+','+p[0].toFixed(6)).join(';');
+    const res=await fetch(`https://router.project-osrm.org/route/v1/bike/${coords}?overview=full&geometries=geojson`);
+    const data=await res.json();
+    if(data.code==='Ok'&&data.routes&&data.routes[0]&&route){
+      route.streetPts=data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+      route.streetDist=data.routes[0].distance;
+      route.streetDur=data.routes[0].duration;
+      drawRoute(notes,detour);
+    }
+  }catch(e){}
 }
 function slowNotes(pts){const ref=pts[0],seg=pts.map(q=>xy(q,ref));const hit=activeZones().filter(z=>z.t==='SLOW_ZONE'&&seg.some((a,i)=>i&&segHits(seg[i-1],a,z.p.map(q=>xy(q,ref)))));
   return hit.length?['המסלול עובר באזור האטה (10–15 קמ"ש): '+hit.map(z=>z.name.split(' (')[0]).join(', ')+'.']:[]}
@@ -669,18 +714,19 @@ function showActs(hasRoute){$('idleActs').hidden=hasRoute;$('routeActs').hidden=
 function drawRoute(notes,detour){showActs(true);
   routeL.eachLayer(l=>{if(l!==oMk)routeL.removeLayer(l)});
   const pts=route.pts;
-  L.polyline(pts,{color:'#fff',weight:10,opacity:.9}).addTo(routeL);
-  L.polyline(pts,{color:route.tm==='walking'?'#16a34a':'#1d4ed8',weight:6,dashArray:route.tm==='walking'?'2 10':null,lineCap:'round'}).addTo(routeL);
-  pts.slice(1,-1).forEach((p,i)=>L.circleMarker(p,{radius:6,color:'#fff',weight:2,fillColor:'#f59e0b',fillOpacity:1}).bindTooltip('נקודת ציון '+(i+1)).addTo(routeL));
+  const linePts=route.streetPts||pts;
+  L.polyline(linePts,{color:'#fff',weight:10,opacity:.9}).addTo(routeL);
+  L.polyline(linePts,{color:route.tm==='walking'?'#16a34a':'#1d4ed8',weight:6,dashArray:route.tm==='walking'?'2 10':null,lineCap:'round'}).addTo(routeL);
+  pts.slice(1,-1).forEach((p,i)=>L.circleMarker(p,{radius:6,color:'#fff',weight:2,fillColor:'#f59e0b',fillOpacity:1}).bindTooltip('נקודת ציון עוקפת '+(i+1)).addTo(routeL));
   L.marker(pts[pts.length-1],{icon:dot('#1d4ed8')}).addTo(routeL);
-  map.fitBounds(L.latLngBounds(pts).pad(.2));
-  const len=pathLen(pts),min=Math.max(1,Math.round(len/(route.tm==='walking'?80:250)));
-  const o=origin.gps&&!route.fixed?null:pts[0];
+  map.fitBounds(L.latLngBounds(linePts).pad(.2));
+  const len=route.streetDist||pathLen(pts);
+  const min=route.streetDur?Math.max(1,Math.round(route.streetDur/60)):Math.max(1,Math.round(len/(route.tm==='walking'?80:250)));
   const url=gmUrl(route.fixed?pts[0]:(curOrigin()||pts[0]),pts[pts.length-1],pts.slice(1,-1),route.tm);
-  $('gmBtn').href=url;$('gmBtn').setAttribute('aria-disabled','false');$('navBtn').disabled=false;
+  $('gmBtn').href=url;$('gmBtn').setAttribute('aria-disabled','false');$('gmBtn').classList.add('pri');$('navBtn').classList.remove('big');$('gmBtn').classList.add('big');$('navBtn').disabled=false;
   const s=$('summary');s.style.display='block';
-  s.innerHTML=`<span class="k">${fmt(len)}</span> · כ-${min} דק' ${route.tm==='walking'?'הליכה':'רכיבה'} (קו ישר)<br>`+
-    (detour?`<b style="color:var(--red)">המסלול עוקף אזור אדום</b> דרך ${pts.length-2} נקודות ציון.`:'המסלול לא חוצה אזור אדום.')+
+  s.innerHTML=`<span class="k">${fmt(len)}</span> · כ-${min} דק' ${route.tm==='walking'?'הליכה':'רכיבה'}${route.streetPts?' (לפי רחובות)':' (קו אווירי)'}<br>`+
+    (detour?`<b style="color:var(--red)">המסלול עוקף אזור אדום</b> דרך ${pts.length-2} נקודות ציון (מועברות ל-Google Maps).`:'המסלול לא חוצה אזור אדום.')+
     (notes.length?'<ul>'+notes.map(n=>`<li>${esc(n)}</li>`).join('')+'</ul>':'');
 }
 
@@ -710,7 +756,7 @@ function startGPS(force){
     const c=p.coords,kmh=(c.speed!=null&&c.speed>=0)?c.speed*3.6:null;
     /* drop an occasional wild fix (e.g. a cell-tower fallback) while a good fix is fresh */
     if(gps&&c.accuracy>100&&gpsAcc<=50&&Date.now()-lastFix<10000){setBadgeQ(c.accuracy);return}
-    lastFix=Date.now();onPos([c.latitude,c.longitude],c.accuracy,kmh);
+    lastFix=Date.now();onPos([c.latitude,c.longitude],c.accuracy,kmh,c.heading);
   },err=>{
     if(sim)return;
     if(err.code===1){gpsDenied=true;navigator.geolocation.clearWatch(watchId);watchId=null;$('gpsBadge').textContent='אין הרשאת מיקום';$('gpsBadge').className='bad';updatePerm();showPerm(true);return}
@@ -728,11 +774,17 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden){if(riding())notify('הניווט מושהה','כשהאפליקציה ברקע הדפדפן עוצר את ה-GPS. חזור לאפליקציה והשאר את המסך דולק.')}
   else{if(!gpsDenied)startGPS(true);if(riding())keepAwake(true);updatePerm()}
 });
-function onPos(ll,acc,kmh){
-    const first=!gps;gps=ll;gpsAcc=acc;gpsKmh=kmh;
+let gpsHeading=null;
+function meHtml(h){
+  if(h!=null&&!isNaN(h))return `<div class="me-arrow" style="transform:rotate(${Math.round(h)}deg)"><svg width="28" height="28" viewBox="0 0 28 28"><polygon points="14,2 24,24 14,19 4,24" fill="#2563eb" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg></div>`;
+  return '<div class="me"></div>';
+}
+function onPos(ll,acc,kmh,heading){
+    const first=!gps;gps=ll;gpsAcc=acc;gpsKmh=kmh;if(heading!=null&&!isNaN(heading))gpsHeading=heading;
     $('gpsBadge').textContent=(sim?'סימולציה':'דיוק ±'+Math.round(gpsAcc)+' מ\'')+(gpsKmh!=null?' · '+Math.round(gpsKmh)+' קמ"ש':'');setBadgeQ(sim?5:gpsAcc);
-    if(!meMk){meMk=L.marker(gps,{icon:L.divIcon({className:'',html:'<div class="me"></div>',iconSize:[20,20],iconAnchor:[10,10]}),zIndexOffset:1000}).addTo(meL);accC=L.circle(gps,{radius:gpsAcc,color:'#2563eb',weight:1,fillOpacity:.12,interactive:false}).addTo(meL)}
-    else{meMk.setLatLng(gps);accC.setLatLng(gps).setRadius(gpsAcc)}
+    const ic=L.divIcon({className:'',html:meHtml(gpsHeading),iconSize:[28,28],iconAnchor:[14,14]});
+    if(!meMk){meMk=L.marker(gps,{icon:ic,zIndexOffset:1000}).addTo(meL);accC=L.circle(gps,{radius:gpsAcc,color:'#2563eb',weight:1,fillOpacity:.12,interactive:false}).addTo(meL)}
+    else{meMk.setLatLng(gps);meMk.setIcon(ic);accC.setLatLng(gps).setRadius(gpsAcc)}
     if(follow||first)map.setView(gps,Math.max(map.getZoom(),16),{animate:!first});
     if(first)$('locBtn').classList.add('on');
     updatePresets();geofence(gps);if(nav)navTick(gps);
@@ -984,6 +1036,36 @@ $('cMin').addEventListener('input',renderCalc);$('cRides').addEventListener('inp
 try{const c=JSON.parse(localStorage.getItem(KEY+'-calc')||'null');if(c){$('cMin').value=c.m;$('cRides').value=c.n}}catch(e){}
 ['cMin','cRides'].forEach(id=>$(id).addEventListener('change',()=>{try{localStorage.setItem(KEY+'-calc',JSON.stringify({m:$('cMin').value,n:$('cRides').value}))}catch(e){}}));
 renderPrices();renderCalc();
+
+
+/* ================= QUICK NEAREST P & OPEN OPERATOR APP ================= */
+$('nearPBtn').addEventListener('click',()=>{
+  const ref=curOrigin()||map.getCenter();
+  const ll=Array.isArray(ref)?ref:[ref.lat,ref.lng];
+  const p=nearestP(ll);
+  if(!p){toast('לא נמצאה נקודת P קרובה במאגר');return}
+  setDest(p.ll,'חניה P: '+p.name);
+  map.setView(p.ll,17);
+  compute();
+  speak('מאתר חניית P קרובה: '+p.name+', במרחק '+Math.round(p.d)+' מטר.',true);
+});
+
+const APP_LINKS={
+  bird:{scheme:'bird://',web:'https://www.bird.co/'},
+  lime:{scheme:'limebike://',web:'https://www.li.me/'},
+  dott:{scheme:'dott://',web:'https://ridedott.com/'},
+  wind:{scheme:'wind://',web:'https://www.wind.co/'},
+  metrofun:{scheme:'metrofun://',web:'https://www.metrofun.co.il/'},
+  scooty:{scheme:'scooty://',web:'https://www.scooty.co.il/'},
+  all:{scheme:'bird://',web:'https://www.bird.co/'}
+};
+$('openAppBtn').addEventListener('click',()=>{
+  const app=APP_LINKS[S.company]||APP_LINKS.bird;
+  toast('פותח אפליקציית '+COMP[S.company]+'…');
+  const start=Date.now();
+  window.location.href=app.scheme;
+  setTimeout(()=>{if(Date.now()-start<1800)window.open(app.web,'_blank')},1200);
+});
 
 /* ================= INIT ================= */
 renderChips();drawAll();updatePresets();
