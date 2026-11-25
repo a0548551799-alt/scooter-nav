@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ניווט קורקינט">
+<title>ניווט קורקינט חכם</title>
+<link rel="manifest" id="manifestLink">
+<link rel="apple-touch-icon" id="appleIcon">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+/* fallback copy of Leaflet's core styles, for hosts that block the CDN stylesheet */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;touch-action:none;outline:0}
+.leaflet-tile,.leaflet-marker-icon{user-select:none;-webkit-user-drag:none}
+.leaflet-tile{visibility:hidden}.leaflet-tile-loaded{visibility:inherit}
+.leaflet-container img.leaflet-tile{max-width:none!important;max-height:none!important}
+.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+.leaflet-zoom-animated{transform-origin:0 0}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden}
+.leaflet-marker-icon,.leaflet-pane>svg path,.leaflet-tile-container{pointer-events:none}
+.leaflet-marker-icon.leaflet-interactive,.leaflet-pane>svg path.leaflet-interactive{pointer-events:visiblePainted;pointer-events:auto;cursor:pointer}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}.leaflet-right .leaflet-control{float:right}
+.leaflet-control-attribution{background:#fffc;font-size:11px;padding:0 5px;color:#333}
+.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}
+.leaflet-popup-content-wrapper{padding:1px;text-align:right;border-radius:12px;background:#fff;color:#222;box-shadow:0 3px 14px #0006}
+.leaflet-popup-content{margin:13px 20px 13px 24px;min-height:1px}
+.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-top:-1px;margin-left:-20px;overflow:hidden;pointer-events:none}
+.leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;transform:rotate(45deg);background:#fff}
+.leaflet-container a.leaflet-popup-close-button{position:absolute;top:0;right:0;width:24px;height:24px;font:16px/24px Tahoma,sans-serif;color:#757575;text-decoration:none;text-align:center}
+.leaflet-tooltip{position:absolute;padding:4px 8px;background:#fff;border-radius:6px;color:#222;white-space:nowrap;pointer-events:none;box-shadow:0 1px 3px #0006;font:13px Heebo,sans-serif}
+:root{--hd:#0f172a;--panel:#ffffff;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--soft:#f1f5f9;
+--red:#e11d48;--gray:#6b7280;--cyan:#0ea5e9;--blue:#1d4ed8;--ok:#0f766e}
+@media (prefers-color-scheme:dark){:root{--panel:#111827;--ink:#f1f5f9;--muted:#94a3b8;--line:#1f2937;--soft:#1e293b}}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%;margin:0}
+body{font:16px/1.45 Heebo,system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--hd);overflow:hidden;-webkit-tap-highlight-color:transparent}
+#app{position:fixed;inset:0;display:flex;flex-direction:column}
+header{background:var(--hd);color:#fff;padding:calc(env(safe-area-inset-top) + 8px) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));z-index:1200}
+.top{display:flex;align-items:center;gap:10px}
+.brand{flex:1;display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px;white-space:nowrap;overflow:hidden}
+.brand svg{flex:none}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-top:8px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid #334155;background:transparent;color:#e2e8f0;border-radius:999px;padding:0 14px;min-height:40px;font:inherit;font-size:14px;cursor:pointer}
+.chip[aria-pressed=true]{background:#38bdf8;border-color:#38bdf8;color:#0f172a;font-weight:700}
+.chip.strict[aria-pressed=true]{background:#fda4af;border-color:#fda4af}
+button,.btn{font:inherit;cursor:pointer}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--line);background:var(--soft);color:var(--ink);font-size:15px;font-weight:500;text-decoration:none;text-align:center}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+.btn.go{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:700}
+.btn.warn{background:var(--red);border-color:var(--red);color:#fff}
+.btn.sm{min-height:36px;font-size:14px;padding:0 10px;border-radius:10px}
+.btn[aria-disabled=true],.btn:disabled{opacity:.45;pointer-events:none}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #38bdf8;outline-offset:2px}
+#installBtn{background:#38bdf8;border:0;color:#0f172a;font-weight:700;min-height:38px;border-radius:10px;padding:0 12px;font-size:14px}
+#mapWrap{position:relative;flex:1}
+#map{position:absolute;inset:0;background:#cbd5e1}
+.leaflet-popup-content{direction:rtl;text-align:right;font:14px/1.45 Heebo,system-ui,sans-serif}
+.leaflet-popup-content b{display:block;font-size:15px;margin-bottom:2px}
+.leaflet-popup-content button{margin-top:8px;min-height:34px;border-radius:8px;border:1px solid #cbd5e1;background:#f1f5f9;padding:0 10px;font:inherit}
+.pmark{width:26px;height:26px;border-radius:6px;background:var(--blue);color:#fff;font:800 16px/26px Heebo,sans-serif;text-align:center;border:2px solid #fff;box-shadow:0 1px 4px #0006}
+.pmark.user{background:#4338ca}
+.me{width:20px;height:20px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 2px #2563eb66,0 2px 6px #0007}
+.endp{width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 5px #0008}
+.fabs{position:absolute;left:max(12px,env(safe-area-inset-left));top:12px;display:flex;flex-direction:column;gap:8px;z-index:900}
+.fab{width:48px;height:48px;border-radius:14px;border:0;background:#fff;color:#0f172a;box-shadow:0 2px 10px #0003;display:grid;place-items:center}
+.fab.on{background:#2563eb;color:#fff}
+#gpsBadge.good{background:#047857e6}#gpsBadge.mid{background:#b45309e6}#gpsBadge.bad{background:#be123ce6}
+.pst{font-size:13px;font-weight:700;padding:6px 10px;border-radius:999px;background:var(--soft)}.pst.granted{background:#d1fae5;color:#065f46}.pst.denied{background:#ffe4e6;color:#9f1239}.pst.prompt{background:#fef3c7;color:#92400e}
+#gpsBadge{position:absolute;right:max(12px,env(safe-area-inset-right));top:12px;z-index:900;background:#0f172acc;color:#fff;font-size:13px;padding:6px 10px;border-radius:10px;white-space:nowrap}
+#navBanner{position:absolute;right:12px;left:72px;top:52px;z-index:950;background:#0f172a;color:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 6px 20px #0005;display:none}
+#navBanner .big{font-size:22px;font-weight:800;line-height:1.15}
+#navBanner .sub{font-size:14px;color:#cbd5e1;margin-top:4px}
+#redBanner{position:absolute;right:12px;left:72px;top:52px;z-index:960;background:var(--red);color:#fff;border-radius:14px;padding:12px 14px;font-weight:800;font-size:17px;display:none;animation:flash .8s steps(2,start) infinite}
+#grayBanner{position:absolute;right:12px;left:72px;bottom:12px;z-index:940;background:#374151;color:#fff;border-radius:14px;padding:10px 14px;font-size:15px;display:none}
+@keyframes flash{50%{background:#7f1d1d}}
+@media (prefers-reduced-motion:reduce){#redBanner{animation:none}}
+#toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:980;background:#0f172a;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;max-width:92%;display:none;text-align:center}
+#sheet{background:var(--panel);border-radius:18px 18px 0 0;box-shadow:0 -6px 24px #0003;z-index:1100;display:flex;flex-direction:column;max-height:56vh;padding-bottom:env(safe-area-inset-bottom)}
+#sheet.min .body{display:none}
+.tabs{display:flex;gap:2px;padding:6px 6px 0;align-items:center;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:1 0 auto;border:0;background:none;color:var(--muted);min-height:44px;padding:0 10px;font-size:15px;font-weight:700;border-bottom:3px solid transparent;white-space:nowrap}
+.price{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.price .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.price .hd b{font-size:17px}
+.price .rate{font-size:14px;white-space:nowrap}
+.price .rate strong{font-size:18px}
+.price p{margin:6px 0 0;font-size:13.5px;color:var(--muted)}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--soft);margin-top:6px}
+.calc{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.calc label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.calc input{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:12px;min-height:44px;padding:8px 12px;background:var(--panel);color:var(--ink)}
+.bar{display:grid;grid-template-columns:7em minmax(0,1fr) 6.5em;gap:8px;align-items:center;font-size:14px;margin:5px 0}
+.bar .tr{height:12px;border-radius:6px;background:var(--soft);position:relative;overflow:hidden}
+.bar .tr i{position:absolute;inset-block:0;inset-inline-start:0;background:#1d4ed8;border-radius:6px}
+.bar .tr i.lo{background:#93c5fd}
+.bar span:last-child{text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tip{background:#ecfdf5;color:#065f46;border-radius:12px;padding:10px 12px;font-size:14px;margin:8px 0 12px}
+@media (prefers-color-scheme:dark){.tip{background:#064e3b;color:#d1fae5}}
+table.fines{width:100%;border-collapse:collapse;font-size:14px}
+.fines td{padding:8px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.fines td:last-child{text-align:left;font-weight:800;white-space:nowrap}
+.rules h4{margin:14px 0 4px;font-size:15px}
+.rules ul{margin:0;padding-inline-start:20px;font-size:14px}
+.rules li{margin:4px 0}
+.tab[aria-selected=true]{color:var(--ink);border-bottom-color:var(--blue)}
+#toggleSheet{flex:none;width:44px;height:44px;border:0;background:none;color:var(--muted)}
+.body{overflow-y:auto;padding:12px max(14px,env(safe-area-inset-left)) 18px max(14px,env(safe-area-inset-right))}
+.pane{display:none}.pane.on{display:block}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.lbl{font-size:13px;color:var(--muted);font-weight:700;width:100%;margin-bottom:-2px}
+.val{font-size:14px;color:var(--ink);background:var(--soft);border-radius:10px;padding:8px 10px;flex:1 1 100%}
+input[type=text],input[type=search],select,textarea{font:inherit;font-size:16px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;min-height:44px;padding:8px 12px}
+input[type=search]{flex:1 1 180px}
+select{flex:1 1 200px}
+textarea{width:100%;min-height:110px;font-size:13px;direction:ltr;font-family:ui-monospace,monospace}
+.results{display:flex;flex-direction:column;gap:4px;margin:-4px 0 10px}
+.results button{text-align:right;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:8px 10px;font-size:14px;min-height:40px}
+.summary{border-radius:14px;background:var(--soft);padding:10px 12px;margin:6px 0 12px;font-size:14px;display:none}
+.summary .k{font-size:20px;font-weight:800}
+.summary ul{margin:6px 0 0;padding-inline-start:18px}
+.summary li{margin:3px 0}
+.card{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.card h4{margin:0 0 6px;font-size:15px}
+.card p{margin:0 0 8px;font-size:13px;color:var(--muted)}
+h3{font-size:16px;margin:16px 0 8px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1 1 0;min-height:44px;border-radius:12px;border:2px solid var(--line);background:var(--panel);color:var(--ink);font-weight:700;font-size:14px}
+.seg button[aria-pressed=true][data-t=NO_RIDE]{border-color:var(--red);background:#ffe4e6;color:#881337}
+.seg button[aria-pressed=true][data-t=NO_PARKING]{border-color:var(--gray);background:#e5e7eb;color:#111827}
+.seg button[aria-pressed=true][data-t=SLOW_ZONE]{border-color:#f59e0b;background:#fef3c7;color:#78350f}
+.seg button[aria-pressed=true][data-t=ALLOWED]{border-color:var(--cyan);background:#e0f2fe;color:#075985}
+.list{font-size:14px}
+.list div{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.leg{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;font-size:14px}
+.sw{flex:none;width:28px;height:20px;border-radius:5px;margin-top:2px}
+.note{font-size:12.5px;color:var(--muted);margin-top:10px}
+.switch{display:flex;align-items:center;gap:8px;font-size:14px;min-height:44px}
+.switch input{width:22px;height:22px}
+#modal{position:fixed;inset:0;background:#0009;z-index:2000;display:none;align-items:center;justify-content:center;padding:20px}
+#modal .box{background:var(--panel);color:var(--ink);border-radius:18px;padding:18px;max-width:380px;width:100%}
+#modal h3{margin-top:0}
+#modal ol{padding-inline-start:20px;margin:8px 0 14px}
+#modal li{margin:6px 0}
+.cov{font-size:13px}.cov b{display:inline-block;min-width:64px}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="top">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#1e293b"/><circle cx="150" cy="380" r="46" fill="none" stroke="#38bdf8" stroke-width="30"/><circle cx="372" cy="380" r="46" fill="none" stroke="#38bdf8" stroke-width="30"/><path d="M150 380H330L300 140M262 140H338" fill="none" stroke="#fff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><circle cx="140" cy="160" r="40" fill="#e11d48"/></svg>
+      <span>ניווט קורקינט חכם</span>
+    </div>
+    <button id="installBtn" type="button">התקן למסך הבית</button>
+  </div>
+  <div class="chips" id="chips" role="group" aria-label="בחירת חברה"></div>
+</header>
+
+<div id="mapWrap">
+  <div id="map" dir="ltr"></div>
+  <div id="gpsBadge">GPS כבוי</div>
+  <div class="fabs">
+    <button class="fab" id="locBtn" type="button" aria-label="מרכז למיקום שלי" title="מרכז למיקום שלי">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+    </button>
+    <button class="fab" id="editFab" type="button" aria-label="עדכן אזור / הוסף חניה" title="עדכן אזור / הוסף חניה">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M4 20l1-5L16 4l4 4L9 19z"/><path d="M13.5 6.5l4 4"/></svg>
+    </button>
+  </div>
+  <div id="navBanner" role="status"><div class="big" id="navBig"></div><div class="sub" id="navSub"></div></div>
+  <div id="redBanner" role="alert"></div>
+  <div id="grayBanner" role="status"></div>
+  <div id="toast" role="status"></div>
+</div>
+
+<section id="sheet">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="nav">ניווט</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="price">מחירים</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="rules">חוקים וקנסות</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="edit">עריכה</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="leg">מקרא</button>
+    <button id="toggleSheet" type="button" aria-label="כווץ / הרחב">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  </div>
+  <div class="body">
+    <!-- NAV -->
+    <div class="pane on" id="pane-nav">
+      <div class="row" id="permRow"></div>
+      <div class="row">
+        <div class="lbl">מוצא</div>
+        <div class="val" id="originVal">ממתין למיקום GPS…</div>
+        <button class="btn sm" id="originGps" type="button">מיקום נוכחי</button>
+        <button class="btn sm" id="originPick" type="button">בחר במפה</button>
+      </div>
+      <div class="row">
+        <div class="lbl">יעד</div>
+        <div class="val" id="destVal">—</div>
+        <input type="search" id="q" placeholder="חיפוש כתובת או מקום" enterkeyhint="search">
+        <button class="btn sm" id="qBtn" type="button">חפש</button>
+        <button class="btn sm" id="destPick" type="button">בחר יעד במפה</button>
+      </div>
+      <div class="results" id="results"></div>
+      <div class="row">
+        <button class="btn pri" id="calcBtn" type="button" style="flex:1 1 150px">חשב מסלול עוקף</button>
+        <button class="btn" id="clearBtn" type="button" style="flex:0 1 auto">נקה מסלול</button>
+        <a class="btn" id="gmBtn" aria-disabled="true" target="_blank" rel="noopener" style="flex:1 1 150px">פתח ב-Google Maps</a>
+      </div>
+      <div class="row">
+        <button class="btn go" id="navBtn" type="button" disabled style="flex:1 1 150px">התחל ניווט קולי</button>
+        <label class="switch"><input type="checkbox" id="voiceChk" checked> הנחיות קוליות</label>
+        <button class="btn sm" id="testVoice" type="button">בדיקת קול</button>
+        <button class="btn sm" id="simBtn" type="button" style="flex:1 1 100%">הדגמת רכיבה (סימולציה)</button>
+      </div>
+      <div class="summary" id="summary"></div>
+
+      <p class="note">המסלול במפה הוא מסדרון בטוח בקווים ישרים בין נקודות ציון שמחוץ לאזורים האדומים. את הניווט רחוב-ברחוב פותחים ב-Google Maps — נקודות הציון העוקפות נשלחות אליו אוטומטית.</p>
+    </div>
+
+    <!-- PRICES -->
+    <div class="pane" id="pane-price">
+      <h3 style="margin-top:4px">מחירים וחבילות מנוי · גוש דן</h3>
+      <div class="tip"><b>טיפ חיסכון:</b> אם אתה רוכב יותר מ-2 פעמים ביום, או הרבה נסיעות קצרות של 3–5 דקות, מנוי Pass חוסך בדרך כלל 30%–50% — רוב הכסף בנסיעה קצרה הולך על דמי הפתיחה.</div>
+      <div class="lbl" style="margin-bottom:6px">מחשבון נסיעה (הזמן מעוגל מעלה לדקה שלמה)</div>
+      <div class="calc">
+        <label>דקות לנסיעה<input type="number" id="cMin" min="1" max="180" step="0.5" value="12" inputmode="decimal"></label>
+        <label>נסיעות ביום<input type="number" id="cRides" min="1" max="20" step="1" value="2" inputmode="numeric"></label>
+      </div>
+      <div id="calcOut"></div>
+      <p class="note">הפס הכהה = הערכה נמוכה, הבהיר = הערכה גבוהה, ליום, בלי מנוי.</p>
+      <h3>לפי חברה</h3>
+      <div id="priceList"></div>
+      <p class="note">המחירים הם טווחים משוערים ומשתנים לפי מבצעים, שעה ועיר. המחיר הקובע הוא זה שמוצג באפליקציה לפני פתיחת הנסיעה.</p>
+    </div>
+
+    <!-- RULES -->
+    <div class="pane rules" id="pane-rules">
+      <h4 style="margin-top:4px">גיל ורישוי</h4>
+      <ul><li>גיל 16 ומעלה, עם רישיון נהיגה בתוקף, מבחן תיאוריה או אישור כשירות א3.</li><li>חלק מהאפליקציות בת"א דורשות אימות ת"ז / סלפי וגיל 18+.</li></ul>
+      <h4>בטיחות והתנהגות</h4>
+      <ul><li>קסדה חובה בכל גיל.</li><li>בחשכה: אורות ואפוד זוהר.</li><li>אסור להרכיב נוסע.</li><li>אסור להחזיק טלפון ביד או להרכיב אוזניות בשתי האוזניים.</li></ul>
+      <h4>איפה רוכבים</h4>
+      <ul><li>שביל אופניים בעדיפות ראשונה; אם אין — ימין הכביש העירוני, בכיוון התנועה.</li><li>אסור לרכוב על מדרכות.</li><li>במעבר חצייה חובה לרדת ולהוביל ברגל.</li><li>אסור לעלות לכביש מהיר (תמרור 216).</li><li>מהירות מרבית 25 קמ"ש; באזורי האטה 10–15 קמ"ש.</li></ul>
+      <h4>קנסות נפוצים</h4>
+      <table class="fines"><tbody>
+        <tr><td>רכיבה ללא קסדה / מתחת לגיל 16</td><td>1,000 ₪</td></tr>
+        <tr><td>ללא רישיון / מבחן א3</td><td>750 ₪</td></tr>
+        <tr><td>רכיבה על מדרכה</td><td>250 ₪</td></tr>
+        <tr><td>חניה חוסמת או מחוץ לפוליגון — חיוב אוטומטי מהחברה, והמונה ממשיך עד ההחזרה לאזור מותר</td><td>50–150 ₪</td></tr>
+      </tbody></table>
+      <p class="note">סכומים לפי המידע שהוזן; הם מתעדכנים מעת לעת בתקנות ובתנאי החברות.</p>
+    </div>
+
+    <!-- EDIT -->
+    <div class="pane" id="pane-edit">
+      <div class="lbl" style="margin-bottom:6px">סוג אזור לציור</div>
+      <div class="seg" id="typeSeg">
+        <button type="button" data-t="NO_RIDE" aria-pressed="true">אדום · אסור</button>
+        <button type="button" data-t="SLOW_ZONE" aria-pressed="false">צהוב · האטה</button>
+        <button type="button" data-t="NO_PARKING" aria-pressed="false">אפור · בלי חניה</button>
+        <button type="button" data-t="ALLOWED" aria-pressed="false">תכלת · מותר</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <input type="text" id="nameIn" placeholder="שם (לא חובה)" style="flex:1 1 100%">
+        <button class="btn pri" id="drawBtn" type="button" style="flex:1 1 140px">צייר אזור</button>
+        <button class="btn" id="addPBtn" type="button" style="flex:1 1 140px">הוסף נקודת P</button>
+      </div>
+      <div class="row" id="drawCtl" style="display:none">
+        <button class="btn go" id="finishBtn" type="button">סיים אזור</button>
+        <button class="btn" id="undoBtn" type="button">בטל נקודה</button>
+        <button class="btn warn" id="cancelBtn" type="button">ביטול</button>
+      </div>
+      <p class="note" id="editHint">האזור נשמר לחברה שנבחרה למעלה (או לכל החברות במצב מחמיר). הקש על אזור מובנה במפה כדי להשבית אותו.</p>
+      <h3>הנתונים שלי</h3>
+      <div class="list" id="myList"></div>
+      <h3>סנכרון בין מכשירים</h3>
+      <div class="row">
+        <button class="btn sm" id="expBtn" type="button">ייצוא ל-JSON</button>
+        <button class="btn sm" id="copyBtn" type="button">העתק</button>
+        <button class="btn sm" id="dlBtn" type="button">הורד קובץ</button>
+        <button class="btn sm" id="impBtn" type="button">ייבא מהטקסט</button>
+        <label class="btn sm">ייבא קובץ<input type="file" id="fileIn" accept=".json,application/json" hidden></label>
+      </div>
+      <textarea id="jsonTa" placeholder="JSON לייצוא / ייבוא"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn sm" id="restoreBtn" type="button">שחזר אזורים מובנים שהושבתו</button>
+        <button class="btn sm warn" id="resetBtn" type="button">מחק את כל הנתונים שלי</button>
+      </div>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="pane" id="pane-leg">
+      <div class="leg"><span class="sw" style="background:#e11d4866;border:2px solid #e11d48"></span><div><b>אדום — אסור לכניסה ולחניה.</b> הקורקינט ננעל או מאט. מנוע הניווט עוקף אותו לגמרי, והתראה מופעלת מ-80 מטר.</div></div>
+      <div class="leg"><span class="sw" style="background:#f59e0b55;border:2px solid #f59e0b"></span><div><b>צהוב — אזור האטה, 10–15 קמ"ש.</b> הקורקינט מגביל מהירות. הניווט עובר דרכו, ואם ה-GPS מודד יותר מ-15 קמ"ש תקבל התראה להאט.</div></div>
+      <div class="leg"><span class="sw" style="background:#6b728066;border:2px solid #6b7280"></span><div><b>אפור — מותר לרכיבה, אסור לחניה חופשית.</b> מותר לעבור דרכו; מסיימים נסיעה רק בנקודת P כחולה. יעד בתוך אזור אפור מנותב ל-P הקרובה.</div></div>
+      <div class="leg"><span class="sw" style="background:#0ea5e933;border:2px solid #0ea5e9"></span><div><b>תכלת — מותר לרכיבה ולחניה חופשית.</b></div></div>
+      <div class="leg"><span class="pmark" style="flex:none;width:28px">P</span><div><b>נקודת חניה ייעודית.</b> סגול = נקודה שהוספת.</div></div>
+      <div class="leg"><span class="sw" style="background:repeating-linear-gradient(90deg,#e11d48 0 6px,transparent 6px 10px);height:6px;margin-top:9px"></span><div><b>דרך מהירה (קירוב).</b> אסור לרכוב עליה; התראה ב-25 מטר. החצייה בגשרים אינה נחסמת.</div></div>
+      <div class="leg"><span class="sw" style="border:2px dashed #6b7280"></span><div><b>קו מקווקו במצב מחמיר:</b> אזור שפעיל רק בחלק מהחברות — מסומן כאפור.</div></div>
+      <h3>כיסוי לפי חברה</h3>
+      <div class="cov" id="cov"></div>
+      <p class="note">אזורים שעוד לא מופיעים במפה כי אין להם קואורדינטות, וכדאי להוסיף בלשונית העריכה: גן המלך דוד וגן אברהם (ר"ג), גן רבקה וגן העלייה השנייה (גבעתיים), ו-170 תאי ה-P בגבעתיים.</p>
+      <p class="note">הגבולות הם קירובים לפי צילומי מסך ונתונים שהוזנו ידנית, ואינם מחליפים את המפה באפליקציית החברה — היא הקובעת בכל מקרה של סתירה. אפשר לתקן כל אזור בלשונית "עדכן אזור / חניה".</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<div id="modal" role="dialog" aria-modal="true"><div class="box" id="modalBox"></div></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+{
+/* ================= DATA ================= */
+const ALLC=['bird','lime','dott','wind','metrofun','scooty'];
+const COMP={bird:'Bird',lime:'Lime',dott:'Dott / Tier',wind:'Wind',metrofun:'מטרופאן',scooty:'סקוטי',all:'כל החברות · מחמיר'};
+const TI={NO_RIDE:{c:'#e11d48',fo:.38,l:'אסור לכניסה ולחניה — האטה עד עצירה, המונה ממשיך'},SLOW_ZONE:{c:'#f59e0b',fo:.33,l:'אזור האטה · 10–15 קמ"ש'},NO_PARKING:{c:'#6b7280',fo:.38,l:'מותר לרכיבה · חניה בתאי P בלבד'},ALLOWED:{c:'#0ea5e9',fo:.13,l:'מותר לרכיבה ולחניה חופשית'}};
+const rect=(n,s,w,e)=>[[n,w],[n,e],[s,e],[s,w]];
+const TLV=['bird','lime','dott','wind','metrofun','scooty'],RGC=['bird','lime','dott','wind'],GIV=['bird','lime','dott'];
+const BUILTIN=[
+ /* --- תכלת: אזורי פעילות --- */
+ {id:'tlv',name:`תל אביב-יפו`,type:'ALLOWED',c:TLV,p:[[32.1200,34.7850],[32.1200,34.8400],[32.0960,34.8150],[32.0880,34.8050],[32.0650,34.8020],[32.0350,34.7950],[32.0350,34.7480],[32.0550,34.7500],[32.0800,34.7660],[32.1020,34.7730]]},
+ {id:'rg',name:`רמת גן · גבעתיים`,type:'ALLOWED',c:RGC,p:[[32.0960,34.8150],[32.1000,34.8470],[32.0450,34.8470],[32.0450,34.8020],[32.0650,34.8020],[32.0880,34.8050]]},
+ {id:'south',name:`גוש דן דרום · בת ים, חולון, אזור, ראשון לציון`,type:'ALLOWED',c:['bird','lime','dott','wind'],p:[[32.0350,34.7420],[32.0350,34.8250],[31.9480,34.8150],[31.9480,34.7350]]},
+ {id:'ashdod',name:`אשדוד (קירוב)`,type:'ALLOWED',c:['bird','lime','dott'],p:rect(31.8300,31.7700,34.6250,34.6800)},
+ {id:'jlm',name:`ירושלים · פעילות מוגבלת/נקודתית`,type:'ALLOWED',c:['lime','dott'],p:rect(31.7920,31.7480,35.1950,35.2280)},
+ {id:'hfa',name:`חיפה · פעילות מוגבלת/נקודתית`,type:'ALLOWED',c:['lime','wind'],p:rect(32.8350,32.7850,34.9550,35.0150)},
+ {id:'ptk-ok',name:`פתח תקווה · קריית אריה, רמת סיב, ז'בוטינסקי, מרכז (Lime בלבד)`,type:'ALLOWED',c:['lime'],p:rect(32.1050,32.0750,34.8550,34.9150)},
+ {id:'eilat',name:`אילת · הטיילת, מרכז העיר והמלונות`,type:'ALLOWED',c:['lime','wind'],p:rect(29.5680,29.5420,34.9420,34.9720)},
+ /* --- אפור: חניה בתאי P בלבד --- */
+ {id:'tlvc',name:`ת"א — מרכז העיר, לב העיר, הצפון הישן, פלורנטין`,type:'NO_PARKING',c:TLV,p:[[32.0920,34.7755],[32.0920,34.7880],[32.0620,34.7820],[32.0620,34.7690]]},
+ {id:'coast',name:`קו החוף ת"א-יפו · הטיילת והמרינה`,type:'NO_PARKING',c:TLV,p:[[32.1020,34.7730],[32.1020,34.7785],[32.0520,34.7560],[32.0520,34.7510]]},
+ {id:'bialik',name:`ר"ג — ציר ביאליק, קלוזנר, השוטרת, הנגיד, שילה`,type:'NO_PARKING',c:RGC,p:[[32.0865,34.8125],[32.0865,34.8178],[32.0795,34.8205],[32.0790,34.8150]]},
+ {id:'bursa',name:`ר"ג — מתחם הבורסה (קירוב)`,type:'NO_PARKING',c:RGC,p:rect(32.0855,32.0805,34.7990,34.8060)},
+ {id:'jabo',name:`ר"ג — תחנות הרק"ל בציר ז'בוטינסקי (קירוב)`,type:'NO_PARKING',c:RGC,p:[[32.0848,34.8000],[32.0838,34.8000],[32.0880,34.8215],[32.0890,34.8215]]},
+ {id:'giv',name:`גבעתיים — כל העיר, חניה ב-170 תאי P בלבד`,type:'NO_PARKING',c:GIV,p:[[32.0775,34.8035],[32.0775,34.8170],[32.0655,34.8170],[32.0655,34.8035]]},
+ {id:'holon',name:`מרכז חולון · סטטוס מוגבל, חלק מהמפעילים הפסיקו`,type:'NO_PARKING',c:['bird','lime','dott'],p:rect(32.0250,32.0080,34.7650,34.7880)},
+ {id:'herz',name:`הרצליה, הרצליה פיתוח ורמת השרון`,type:'NO_PARKING',c:['bird','lime','dott'],p:rect(32.1850,32.1320,34.7950,34.8550)},
+ /* --- צהוב: האטה --- */
+ {id:'s-prom',name:`טיילת שלמה להט`,type:'SLOW_ZONE',c:TLV,p:[[32.1020,34.7730],[32.1020,34.7785],[32.0520,34.7560],[32.0520,34.7510]]},
+ {id:'s-port',name:`נמל תל אביב (קירוב)`,type:'SLOW_ZONE',c:TLV,p:rect(32.1010,32.0965,34.7715,34.7760)},
+ {id:'s-flea',name:`שוק הפשפשים, יפו (קירוב)`,type:'SLOW_ZONE',c:TLV,p:rect(32.0555,32.0525,34.7545,34.7580)},
+ {id:'s-lev',name:`שוק לוינסקי (קירוב)`,type:'SLOW_ZONE',c:TLV,p:rect(32.0590,32.0570,34.7720,34.7760)},
+ {id:'s-mes',name:`פארק המסילה (קירוב)`,type:'SLOW_ZONE',c:TLV,p:[[32.0565,34.7600],[32.0570,34.7612],[32.0512,34.7685],[32.0505,34.7673]]},
+ /* --- אדום: אסור --- */
+ {id:'bb',name:`בני ברק — חסימה מלאה`,edge:`גישה רק בגבולות הקצה מול ר"ג: ציר ז'בוטינסקי ליד מכון מור/בן גוריון, הצד המערבי של בן גוריון, מתחם BBC/מצדה/הלח"י בצפון, וקו התפר בשד' ירושלים / חזון אי"ש / מרום נווה / סמטת אבני חושן 8.`,type:'NO_RIDE',c:ALLC,p:[[32.0965,34.8235],[32.0960,34.8465],[32.0752,34.8450],[32.0751,34.8322],[32.0755,34.8285],[32.0840,34.8232],[32.0885,34.8226]]},
+ {id:'gsh',name:`גבעת שמואל — רחובות פנימיים`,edge:`גישה רק בגבולות המערביים מול ר"ג / קמפוס בר-אילן / ציר אלוף שדה–גהה.`,type:'NO_RIDE',c:ALLC,p:[[32.0880,34.8465],[32.0880,34.8620],[32.0715,34.8620],[32.0715,34.8455]]},
+ {id:'t-sand',name:`רצועת החול בחופי ת"א (קירוב)`,near:30,type:'NO_RIDE',c:TLV,p:[[32.1000,34.7700],[32.1000,34.7721],[32.0540,34.7519],[32.0540,34.7498]]},
+ {id:'t-nb',name:`מדרחוב נחלת בנימין (קירוב)`,near:30,type:'NO_RIDE',c:TLV,p:[[32.0682,34.7698],[32.0682,34.7704],[32.0648,34.7719],[32.0648,34.7713]]},
+ {id:'t-carmel',name:`שוק הכרמל (קירוב)`,near:30,type:'NO_RIDE',c:TLV,p:[[32.0683,34.7692],[32.0678,34.7699],[32.0648,34.7672],[32.0653,34.7665]]},
+ {id:'t-sarona',name:`שרונה — שבילים פנימיים (קירוב)`,near:30,type:'NO_RIDE',c:TLV,p:rect(32.0745,32.0718,34.7845,34.7880)},
+ {id:'t-meir',name:`גן מאיר (קירוב)`,near:30,type:'NO_RIDE',c:TLV,p:rect(32.0752,32.0737,34.7717,34.7735)},
+ {id:'t-atz',name:`גן העצמאות (קירוב)`,near:30,type:'NO_RIDE',c:TLV,p:rect(32.0925,32.0893,34.7712,34.7740)},
+ {id:'yarkon',name:`פארק הירקון — מדשאות ושבילי הליכה (קירוב)`,near:30,type:'NO_RIDE',c:TLV,p:rect(32.1010,32.0975,34.8050,34.8150)},
+ {id:'yarkon2',name:`פארק הירקון מערב — מדשאות (קירוב)`,near:30,type:'NO_RIDE',c:TLV,p:rect(32.1005,32.0985,34.7950,34.8030)},
+ {id:'giv-park',name:`פארק גבעתיים (קירוב — מיקום משוער, כדאי לאמת)`,near:30,type:'NO_RIDE',c:GIV,p:rect(32.0715,32.0698,34.8085,34.8112)},
+ {id:'rg-park',name:`הפארק הלאומי ר"ג — מדשאות ושבילים פנימיים (קירוב)`,near:30,type:'NO_RIDE',c:RGC,p:rect(32.0560,32.0490,34.8195,34.8300)},
+ {id:'rg-marom',name:`מדשאות פארק מרום נווה (קירוב)`,near:20,type:'NO_RIDE',c:RGC,p:rect(32.0712,32.0700,34.8295,34.8315)},
+ {id:'ptk-no',name:`פתח תקווה (חסום ב-Bird וב-Dott/Tier)`,type:'NO_RIDE',c:['bird','dott'],p:rect(32.1050,32.0750,34.8550,34.9150)},
+ {id:'hod',name:`הוד השרון (קירוב)`,type:'NO_RIDE',c:['bird'],p:rect(32.1650,32.1350,34.8750,34.9150)},
+ {id:'raan',name:`רעננה (קירוב)`,type:'NO_RIDE',c:['bird'],p:rect(32.2000,32.1700,34.8550,34.8950)},
+ {id:'lod',name:`לוד (קירוב)`,type:'NO_RIDE',c:['bird','dott'],p:rect(31.9650,31.9400,34.8750,34.9100)},
+ {id:'ramla',name:`רמלה (קירוב)`,type:'NO_RIDE',c:['bird','dott'],p:rect(31.9400,31.9150,34.8500,34.8900)},
+ {id:'tlvair',name:`נתב"ג (קירוב)`,type:'NO_RIDE',c:['bird'],p:rect(32.0150,31.9900,34.8600,34.9050)},
+ {id:'nesz',name:`נס ציונה (קירוב)`,type:'NO_RIDE',c:['bird'],p:rect(31.9450,31.9150,34.7800,34.8200)},
+ {id:'elad',name:`אלעד (קירוב)`,type:'NO_RIDE',c:['lime'],p:rect(32.0600,32.0400,34.9450,34.9650)},
+ {id:'modi',name:`מודיעין עילית (קירוב)`,type:'NO_RIDE',c:['lime'],p:rect(31.9450,31.9200,35.0250,35.0550)}
+];
+const PRICES=[
+ {k:'dott',name:'Dott',open:[0,5],min:[1.00,1.25],openTxt:'~5 ₪ (0 ₪ במנוי/מבצע)',pass:'חבילה יומית (2 נסיעות), שבועית (10 נסיעות) וחודשית — ללא דמי פתיחה.',ins:true},
+ {k:'lime',name:'Lime',open:[5,5],min:[0.80,1.20],openTxt:'~5 ₪',pass:'Lime Pass: מנוי שבועי/חודשי שמבטל דמי פתיחה, או חבילות 30/60/100+ דקות ב-20%–30% הנחה.',ins:true},
+ {k:'bird',name:'Bird',open:[5,5],min:[0.80,1.20],openTxt:'~5 ₪',pass:'Ride Pass יומי/שבועי וכרטיסיות דקות. ייתכן פיקדון זמני באשראי בנסיעה הראשונה.',ins:false},
+ {k:'metrofun',name:'מטרופאן',open:[4,5],min:[0.70,1.00],openTxt:'4–5 ₪',pass:'חבילות דקות ומנויים. פעילה בעיקר בתל אביב-יפו.',ins:false},
+ {k:'scooty',name:'סקוטי',open:[4,5],min:[0.70,1.00],openTxt:'4–5 ₪',pass:'חבילות דקות ומבצעי הצטרפות. פעילה בעיקר בתל אביב-יפו.',ins:false}
+];
+const BUILTIN_P=[
+ {id:'p1',name:`ביאליק / כופר היישוב`,ll:[32.0848,34.8145]},
+ {id:'p2',name:`קלוזנר / ספראי / השוטרת`,ll:[32.0832,34.8162]},
+ {id:'p3',name:`הנגיד / ביאליק דרום`,ll:[32.0815,34.8175]},
+ {id:'p4',name:`סמטת אבני חושן / פארק מלמדוביץ' (צפון)`,ll:[32.0724,34.8318]},
+ {id:'p5',name:`סמטת אבני חושן / פארק מלמדוביץ' (מרכז)`,ll:[32.0720,34.8322]},
+ {id:'p6',name:`סמטת אבני חושן / פארק מלמדוביץ' (דרום)`,ll:[32.0716,34.8325]}
+];
+const LM={
+ border:{name:`שד' ירושלים / חזון אי"ש — איסוף קורקינטים על הגבול`,ll:[32.074883,34.832222]},
+ marom:{name:`מרכז קהילתי מרום נווה (חזון אי"ש 90, ר"ג)`,ll:[32.073437,34.832477]},
+ gaon:{name:`הגאון אליהו 1, ר"ג — קורקינט בגבול מרום נווה`,ll:[32.073366,34.828691]},
+ cem:{name:`בית קברות בני ברק (סמטת אבני חושן 8)`,ll:[32.072224,34.834476]},
+ harah:{name:`רחוב הרא"ה — ציר מעבר מותר`,ll:[32.072737,34.824944]},
+ krin:{name:`רחוב קריניצי — ציר מעבר צפוני`,ll:[32.084502,34.819550]},
+ shal:{name:`השלישות (דוד בן גוריון 100, ר"ג) — חניה בצד המערבי בלבד`,ll:[32.085913,34.822218]}
+};
+const HIGHWAYS=[{name:`נתיבי איילון (קירוב)`,p:[[32.0420,34.7880],[32.0560,34.7860],[32.0680,34.7905],[32.0800,34.7960],[32.0920,34.7985],[32.1050,34.7990],[32.1150,34.8010]]},
+ {name:`כביש 4 / דרך גהה, רמת גן (קירוב)`,p:[[32.0450,34.8380],[32.0580,34.8420],[32.0720,34.8455],[32.0850,34.8490],[32.1000,34.8530]]}];
+
+/* ================= STATE ================= */
+const KEY='scooter-nav-v1';
+let S={company:'bird',userZones:[],userP:[],disabled:[],voice:true};
+try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s)S={...S,...s}}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=m=>m<1000?Math.round(m)+' מ\'':(m/1000).toFixed(1)+' ק"מ';
+let mode=null;            // 'origin' | 'dest' | 'draw' | 'park' | null
+let drawType='NO_RIDE',drawPts=[];
+let origin={gps:true,ll:null,label:''},dest={ll:null,label:''};
+let route=null,nav=null,gps=null,gpsAcc=null,watchId=null,follow=true;
+
+/* ================= GEOMETRY ================= */
+const RAD=Math.PI/180,RE=6371000;
+const xy=(p,r)=>[(p[1]-r[1])*RAD*RE*Math.cos(r[0]*RAD),(p[0]-r[0])*RAD*RE];
+const unxy=(q,r)=>[r[0]+q[1]/RE/RAD,r[1]+q[0]/(RE*Math.cos(r[0]*RAD))/RAD];
+const dist=(a,b)=>{const q=xy(b,a);return Math.hypot(q[0],q[1])};
+const bearing=(a,b)=>{const q=xy(b,a);return (Math.atan2(q[0],q[1])/RAD+360)%360};
+function pip(pt,P){let ins=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const xi=P[i][0],yi=P[i][1],xj=P[j][0],yj=P[j][1];if(((yi>pt[1])!==(yj>pt[1]))&&(pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi))ins=!ins}return ins}
+const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+function segX(a,b,c,d){const d1=cr(c,d,a),d2=cr(c,d,b),d3=cr(a,b,c),d4=cr(a,b,d);return((d1>0&&d2<0)||(d1<0&&d2>0))&&((d3>0&&d4<0)||(d3<0&&d4>0))}
+function segHits(a,b,P){if(pip(a,P)||pip(b,P)||pip([(a[0]+b[0])/2,(a[1]+b[1])/2],P))return true;for(let i=0,j=P.length-1;i<P.length;j=i++)if(segX(a,b,P[j],P[i]))return true;return false}
+function onSeg(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy;let t=L2?((p[0]-a[0])*dx+(p[1]-a[1])*dy)/L2:0;t=Math.max(0,Math.min(1,t));return[a[0]+t*dx,a[1]+t*dy]}
+function nearestOn(p,P,closed=true){let best=P[0],bd=Infinity;const n=P.length;for(let i=closed?0:1;i<n;i++){const j=i===0?n-1:i-1,q=onSeg(p,P[j],P[i]),d=Math.hypot(q[0]-p[0],q[1]-p[1]);if(d<bd){bd=d;best=q}}return[best,bd]}
+const centroid=P=>[P.reduce((s,q)=>s+q[0],0)/P.length,P.reduce((s,q)=>s+q[1],0)/P.length];
+function pushOut(p,P,m){const[q]=nearestOn(p,P);let dx=q[0]-p[0],dy=q[1]-p[1],L=Math.hypot(dx,dy);if(L<.01){const c=centroid(P);dx=q[0]-c[0];dy=q[1]-c[1];L=Math.hypot(dx,dy)||1}return[q[0]+dx/L*m,q[1]+dy/L*m]}
+const pathLen=pts=>pts.reduce((s,p,i)=>i?s+dist(pts[i-1],p):0,0);
+
+/* ================= ZONES ================= */
+function activeZones(){
+  const co=S.company,all=[...BUILTIN.filter(z=>!S.disabled.includes(z.id)).map(z=>({...z,builtin:true})),...S.userZones];
+  const out=[];
+  for(const z of all){
+    if(co==='all'){let t=z.type;if(t==='ALLOWED'&&!ALLC.every(c=>z.c.includes(c)))t='NO_PARKING';out.push({...z,t,down:t!==z.type})}
+    else if(z.c.includes(co))out.push({...z,t:z.type});
+  }
+  return out;
+}
+const allP=()=>[...BUILTIN_P,...S.userP.map(p=>({...p,user:true}))];
+function zonesAt(ll,t){return activeZones().filter(z=>z.t===t&&pip([0,0],z.p.map(q=>xy(q,ll))))}
+function nearestP(ll){const reds=activeZones().filter(z=>z.t==='NO_RIDE');let best=null;for(const p of allP()){if(reds.some(z=>pip([0,0],z.p.map(q=>xy(q,p.ll)))))continue;const d=dist(ll,p.ll);if(!best||d<best.d)best={...p,d}}return best}
+
+/* ================= MAP ================= */
+const map=L.map('map',{zoomControl:false}).setView([32.0790,34.8250],15);
+const tiles=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+let tileWarned=false;tiles.on('tileerror',()=>{if(tileWarned)return;tileWarned=true;toast('מפת הרחובות לא נטענת כאן (תצוגה מקדימה). האזורים, המסלולים וההדגמה עובדים.',7000)});
+const zoneL=L.layerGroup().addTo(map),pL=L.layerGroup().addTo(map),lmL=L.layerGroup().addTo(map),hwL=L.layerGroup().addTo(map),routeL=L.layerGroup().addTo(map),editL=L.layerGroup().addTo(map),meL=L.layerGroup().addTo(map);
+const pIcon=u=>L.divIcon({className:'',html:`<div class="pmark${u?' user':''}">P</div>`,iconSize:[26,26],iconAnchor:[13,13]});
+const dot=c=>L.divIcon({className:'',html:`<div class="endp" style="background:${c}"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
+
+function popupZone(z){
+  const i=TI[z.t];
+  const cos=z.c.map(c=>COMP[c]).join(', ');
+  return `<b>${esc(z.name)}</b>${esc(i.l)}${z.down?'<br>מצב מחמיר: פעיל רק בחלק מהחברות':''}<br><small>חברות: ${esc(cos)}</small>${z.edge?'<br><small>'+esc(z.edge)+'</small>':''}<br>`+
+   (z.builtin?`<button data-act="disable" data-id="${esc(z.id)}">השבת אזור זה</button>`:`<button data-act="delzone" data-id="${esc(z.id)}">מחק אזור</button>`);
+}
+function drawAll(){
+  const inter=!mode;
+  zoneL.clearLayers();pL.clearLayers();lmL.clearLayers();hwL.clearLayers();
+  const ord={ALLOWED:0,NO_PARKING:1,SLOW_ZONE:2,NO_RIDE:3};
+  activeZones().sort((a,b)=>ord[a.t]-ord[b.t]).forEach(z=>{
+    const i=TI[z.t];
+    const pg=L.polygon(z.p,{color:i.c,weight:z.t==='ALLOWED'?1.5:2.2,fillColor:i.c,fillOpacity:i.fo,dashArray:z.down?'7 6':null,interactive:inter});
+    if(inter)pg.bindPopup(popupZone(z));
+    pg.addTo(zoneL);
+  });
+  HIGHWAYS.forEach(h=>L.polyline(h.p,{color:'#e11d48',weight:5,dashArray:'8 8',opacity:.8,interactive:inter}).bindTooltip(esc(h.name)+' — אסור לרכיבה').addTo(hwL));
+  allP().forEach(p=>{const m=L.marker(p.ll,{icon:pIcon(p.user),interactive:inter});if(inter)m.bindPopup(`<b>חניה ייעודית P</b>${esc(p.name)}<br><button data-act="dest" data-lat="${p.ll[0]}" data-lng="${p.ll[1]}" data-name="${esc(p.name)}">נווט לכאן</button>${p.user?` <button data-act="delp" data-id="${esc(p.id)}">מחק</button>`:''}`);m.addTo(pL)});
+  Object.values(LM).forEach(p=>{const m=L.circleMarker(p.ll,{radius:6,color:'#fff',weight:2,fillColor:'#0f172a',fillOpacity:1,interactive:inter});if(inter)m.bindPopup(`<b>${esc(p.name)}</b><button data-act="dest" data-lat="${p.ll[0]}" data-lng="${p.ll[1]}" data-name="${esc(p.name)}">קבע כיעד</button> <button data-act="orig" data-lat="${p.ll[0]}" data-lng="${p.ll[1]}" data-name="${esc(p.name)}">קבע כמוצא</button>`);m.addTo(lmL)});
+  renderMyList();renderCov();
+}
+
+/* ================= UI: companies ================= */
+function renderChips(){
+  $('chips').innerHTML=Object.entries(COMP).map(([k,v])=>`<button class="chip${k==='all'?' strict':''}" type="button" data-co="${k}" aria-pressed="${S.company===k}">${esc(v)}</button>`).join('');
+}
+$('chips').addEventListener('click',e=>{const b=e.target.closest('[data-co]');if(!b)return;S.company=b.dataset.co;save();renderChips();drawAll();if(route&&!route.fixed)compute(true);toast('נבחרה: '+COMP[S.company])});
+
+function renderCov(){
+  const z=[...BUILTIN];
+  $('cov').innerHTML=ALLC.map(c=>{const ok=z.filter(x=>x.c.includes(c)&&x.type==='ALLOWED').map(x=>x.name.split(' ·')[0].split(' (')[0]);const no=z.filter(x=>x.c.includes(c)&&x.type==='NO_RIDE'&&!x.near).map(x=>x.name.split(' (')[0].split(' —')[0]);return `<p><b>${esc(COMP[c])}</b> פעיל: ${esc(ok.join(', '))}.<br><span style="color:var(--red)">חסום: ${esc(no.join(', '))}, כבישים מהירים${z.some(x=>x.near&&x.c.includes(c))?', פארקים ומדרחובות מסומנים':''}.</span></p>`}).join('');
+}
+
+/* ================= toast/modal ================= */
+let tT;function toast(t,ms=2600){const el=$('toast');el.textContent=t;el.style.display='block';clearTimeout(tT);tT=setTimeout(()=>el.style.display='none',ms)}
+function modal(html){$('modalBox').innerHTML=html+'<button class="btn pri" type="button" data-act="closemodal" style="width:100%">סגור</button>';$('modal').style.display='flex'}
+$('modal').addEventListener('click',e=>{if(e.target.id==='modal')$('modal').style.display='none'});
+
+/* ================= tabs & sheet ================= */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>showTab(t.dataset.tab)));
+function showTab(name){document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===name));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+name));$('sheet').classList.remove('min');setTimeout(()=>map.invalidateSize(),50)}
+$('toggleSheet').addEventListener('click',()=>{$('sheet').classList.toggle('min');setTimeout(()=>map.invalidateSize(),50)});
+$('editFab').addEventListener('click',()=>showTab('edit'));
+
+/* ================= origin / dest ================= */
+function setMode(m){mode=m;drawAll();$('editFab').classList.toggle('on',m==='draw'||m==='park');
+  if(m==='origin')toast('הקש על המפה לבחירת נקודת מוצא',4000);
+  if(m==='dest')toast('הקש על המפה לבחירת יעד',4000);
+  if(m==='draw')toast('הקש על המפה להוספת קודקודים, ואז "סיים אזור"',4000);
+  if(m==='park')toast('הקש על המפה כדי להוסיף נקודת P',4000);
+  if(m==='origin'||m==='dest'||m==='draw'||m==='park')$('sheet').classList.add('min');
+  setTimeout(()=>map.invalidateSize(),50);
+}
+let oMk=null,dMk=null;
+function gpsLabel(){return gps?'המיקום הנוכחי שלך · דיוק ±'+Math.round(gpsAcc)+' מ\'':'ממתין למיקום GPS…'}
+function setOrigin(ll,label){origin={gps:!ll,ll,label:label||(ll?ll[0].toFixed(5)+', '+ll[1].toFixed(5):'')};$('originVal').textContent=ll?origin.label:gpsLabel();
+  if(oMk){routeL.removeLayer(oMk);oMk=null}if(ll){oMk=L.marker(ll,{icon:dot('#16a34a'),draggable:true}).addTo(routeL);oMk.on('dragend',()=>{const p=oMk.getLatLng();setOrigin([p.lat,p.lng]);compute()})}
+  if(!ll)startGPS();updatePresets()}
+function setDest(ll,label){dest={ll,label:label||ll[0].toFixed(5)+', '+ll[1].toFixed(5)};$('destVal').textContent=dest.label;placeDest(ll)}
+function placeDest(ll){if(dMk)map.removeLayer(dMk);dMk=L.marker(ll,{icon:dot('#e11d48'),draggable:true}).addTo(map);dMk.on('dragend',()=>{const p=dMk.getLatLng();setDest([p.lat,p.lng]);compute()})}
+$('originGps').addEventListener('click',()=>{setOrigin(null);toast('המוצא: מיקום נוכחי')});
+$('originPick').addEventListener('click',()=>setMode('origin'));
+$('destPick').addEventListener('click',()=>setMode('dest'));
+const curOrigin=()=>origin.gps?gps:origin.ll;
+
+/* search */
+async function doSearch(){const q=$('q').value.trim();if(!q)return;$('results').innerHTML='<div class="note">מחפש…</div>';
+  try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&countrycodes=il&accept-language=he&q='+encodeURIComponent(q));const j=await r.json();
+    if(!j.length){$('results').innerHTML='<div class="note">לא נמצאו תוצאות</div>';return}
+    $('results').innerHTML=j.map(x=>`<button type="button" data-act="res" data-lat="${+x.lat}" data-lng="${+x.lon}" data-name="${esc(x.display_name.split(',').slice(0,3).join(','))}">${esc(x.display_name)}</button>`).join('');
+  }catch(e){$('results').innerHTML='<div class="note">החיפוש לא זמין כרגע — בחר יעד במפה.</div>'}}
+$('qBtn').addEventListener('click',doSearch);
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doSearch()}});
+
+/* ================= map click ================= */
+map.on('click',e=>{const ll=[e.latlng.lat,e.latlng.lng];
+  if(mode==='origin'){setOrigin(ll);setMode(null);$('sheet').classList.remove('min');if(dest.ll)compute()}
+  else if(mode==='dest'){setDest(ll);setMode(null);$('sheet').classList.remove('min');compute()}
+  else if(mode==='draw'){drawPts.push(ll);renderDraft()}
+  else if(mode==='park'){const name=$('nameIn').value.trim()||'חניה שלי '+(S.userP.length+1);S.userP.push({id:'up'+Date.now(),name,ll});save();setMode(null);$('sheet').classList.remove('min');$('nameIn').value='';toast('נקודת P נשמרה')}
+});
+map.on('dragstart',()=>{follow=false;$('locBtn').classList.remove('on')});
+
+/* ================= ROUTING ================= */
+function plan(o,d){
+  const ref=o,reds=activeZones().filter(z=>z.t==='NO_RIDE').map(z=>z.p.map(q=>xy(q,ref)));
+  let O=xy(o,ref),D=xy(d,ref);const notes=[];let walkOut=false,destMoved=false;
+  for(const P of reds){if(pip(O,P)){O=pushOut(O,P,30);walkOut=true}if(pip(D,P)){D=pushOut(D,P,30);destMoved=true}}
+  if(walkOut)notes.push('נקודת המוצא בתוך אזור אדום — יש להוליך את הקורקינט ברגל אל מחוץ לאזור.');
+  if(destMoved)notes.push('היעד בתוך אזור אדום — הוזז לנקודה המותרת הקרובה ביותר מחוץ לו.');
+  const nodes=[O,D];
+  for(const P of reds){const c=centroid(P);for(const v of P){const dx=v[0]-c[0],dy=v[1]-c[1],L2=Math.hypot(dx,dy)||1;const n=[v[0]+dx/L2*45,v[1]+dy/L2*45];if(!reds.some(Q=>pip(n,Q)))nodes.push(n)}}
+  const ok=(a,b)=>!reds.some(P=>segHits(a,b,P));
+  const N=nodes.length,dd=Array(N).fill(Infinity),prev=Array(N).fill(-1),done=Array(N).fill(false);dd[0]=0;
+  for(let k=0;k<N;k++){let u=-1;for(let i=0;i<N;i++)if(!done[i]&&(u<0||dd[i]<dd[u]))u=i;if(u<0||dd[u]===Infinity)break;done[u]=true;if(u===1)break;
+    for(let v=0;v<N;v++){if(done[v])continue;const w=Math.hypot(nodes[u][0]-nodes[v][0],nodes[u][1]-nodes[v][1]);if(dd[u]+w<dd[v]&&ok(nodes[u],nodes[v])){dd[v]=dd[u]+w;prev[v]=u}}}
+  if(dd[1]===Infinity)return null;
+  const pts=[];for(let v=1;v>=0;v=prev[v])pts.unshift(unxy(nodes[v],ref));
+  if(walkOut)pts.unshift(o);
+  return{pts,notes,detour:pts.length>2+(walkOut?1:0)};
+}
+function gmUrl(o,d,wps,tm){const f=p=>p[0].toFixed(6)+','+p[1].toFixed(6);let u='https://www.google.com/maps/dir/?api=1'+(o?'&origin='+f(o):'')+'&destination='+f(d);
+  if(wps&&wps.length){let w=wps;if(w.length>9){const st=w.length/9;w=Array.from({length:9},(_,i)=>wps[Math.floor(i*st)])}u+='&waypoints='+w.map(f).join('%7C')}return u+'&travelmode='+tm}
+
+function compute(quiet){
+  const o=curOrigin();
+  if(!o){toast(origin.gps?'ממתין למיקום GPS… אפשר גם לבחור מוצא במפה':'בחר נקודת מוצא');startGPS();return}
+  if(!dest.ll){toast('בחר יעד');return}
+  const notes=[];let fin=dest.ll;
+  if(!zonesAt(dest.ll,'NO_RIDE').length){
+    const g=zonesAt(dest.ll,'NO_PARKING');
+    if(g.length){const p=nearestP(dest.ll);
+      if(p&&p.d<2000){fin=p.ll;notes.push(`היעד באזור אפור (${g[0].name}) — אסור לחניה חופשית. המסלול מסתיים בנקודת P "${p.name}", ${fmt(p.d)} מהיעד.`);if(!quiet)speak('היעד נמצא באזור אסור לחניה חופשית. מנווט לנקודת החניה הכחולה הקרובה ביותר.',true)}
+      else{const P=g[0].p.map(q=>xy(q,dest.ll));fin=unxy(pushOut([0,0],P,25),dest.ll);notes.push('היעד באזור אפור ואין נקודת P בטווח 2 ק"מ — הסיום הוזז לגבול האזור. ודא באפליקציית החברה שמותר לחנות שם.')}}
+    else if(!zonesAt(dest.ll,'ALLOWED').length)notes.push(`היעד מחוץ לאזורי הפעילות של ${COMP[S.company]} — ייתכן שלא ניתן לסיים שם נסיעה.`);
+  }
+  const r=plan(o,fin);
+  if(!r){toast('לא נמצא מסלול שעוקף את האזורים האדומים');return}
+  route={pts:r.pts,fixed:false,tm:'bicycling'};
+  drawRoute(r.notes.concat(notes,slowNotes(r.pts)),r.detour);
+}
+function slowNotes(pts){const ref=pts[0],seg=pts.map(q=>xy(q,ref));const hit=activeZones().filter(z=>z.t==='SLOW_ZONE'&&seg.some((a,i)=>i&&segHits(seg[i-1],a,z.p.map(q=>xy(q,ref)))));
+  return hit.length?['המסלול עובר באזור האטה (10–15 קמ"ש): '+hit.map(z=>z.name.split(' (')[0]).join(', ')+'.']:[]}
+function drawRoute(notes,detour){
+  routeL.eachLayer(l=>{if(l!==oMk)routeL.removeLayer(l)});
+  const pts=route.pts;
+  L.polyline(pts,{color:'#fff',weight:10,opacity:.9}).addTo(routeL);
+  L.polyline(pts,{color:route.tm==='walking'?'#16a34a':'#1d4ed8',weight:6,dashArray:route.tm==='walking'?'2 10':null,lineCap:'round'}).addTo(routeL);
+  pts.slice(1,-1).forEach((p,i)=>L.circleMarker(p,{radius:6,color:'#fff',weight:2,fillColor:'#f59e0b',fillOpacity:1}).bindTooltip('נקודת ציון '+(i+1)).addTo(routeL));
+  L.marker(pts[pts.length-1],{icon:dot('#1d4ed8')}).addTo(routeL);
+  map.fitBounds(L.latLngBounds(pts).pad(.2));
+  const len=pathLen(pts),min=Math.max(1,Math.round(len/(route.tm==='walking'?80:250)));
+  const o=origin.gps&&!route.fixed?null:pts[0];
+  const url=gmUrl(route.fixed?pts[0]:(curOrigin()||pts[0]),pts[pts.length-1],pts.slice(1,-1),route.tm);
+  $('gmBtn').href=url;$('gmBtn').setAttribute('aria-disabled','false');$('navBtn').disabled=false;
+  const s=$('summary');s.style.display='block';
+  s.innerHTML=`<span class="k">${fmt(len)}</span> · כ-${min} דק' ${route.tm==='walking'?'הליכה':'רכיבה'} (קו ישר)<br>`+
+    (detour?`<b style="color:var(--red)">המסלול עוקף אזור אדום</b> דרך ${pts.length-2} נקודות ציון.`:'המסלול לא חוצה אזור אדום.')+
+    (notes.length?'<ul>'+notes.map(n=>`<li>${esc(n)}</li>`).join('')+'</ul>':'');
+}
+
+/* origin label */
+function updatePresets(){if(origin.gps)$('originVal').textContent=gpsLabel()}
+function clearRoute(){
+  if(nav)stopNav();stopSim();route=null;
+  routeL.eachLayer(l=>{if(l!==oMk)routeL.removeLayer(l)});if(dMk){map.removeLayer(dMk);dMk=null}
+  dest={ll:null,label:''};$('destVal').textContent='—';$('q').value='';$('results').innerHTML='';
+  $('summary').style.display='none';$('gmBtn').removeAttribute('href');$('gmBtn').setAttribute('aria-disabled','true');$('navBtn').disabled=true;
+  setOrigin(null);follow=true;if(gps)map.setView(gps,16);
+}
+$('calcBtn').addEventListener('click',()=>{ensureAudio();compute()});
+$('clearBtn').addEventListener('click',clearRoute);
+
+/* ================= GPS ================= */
+let meMk=null,accC=null;
+let lastFix=0,gpsDenied=false,gpsRetry=null;
+function startGPS(force){
+  if(!navigator.geolocation){$('gpsBadge').textContent='אין תמיכה ב-GPS';return}
+  if(watchId!==null&&!force)return;
+  if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null}
+  clearTimeout(gpsRetry);
+  if(!gps)$('gpsBadge').textContent='מאתר מיקום…';
+  watchId=navigator.geolocation.watchPosition(p=>{
+    gpsDenied=false;updatePerm();if(sim)return;
+    const c=p.coords,kmh=(c.speed!=null&&c.speed>=0)?c.speed*3.6:null;
+    /* drop an occasional wild fix (e.g. a cell-tower fallback) while a good fix is fresh */
+    if(gps&&c.accuracy>100&&gpsAcc<=50&&Date.now()-lastFix<10000){setBadgeQ(c.accuracy);return}
+    lastFix=Date.now();onPos([c.latitude,c.longitude],c.accuracy,kmh);
+  },err=>{
+    if(sim)return;
+    if(err.code===1){gpsDenied=true;navigator.geolocation.clearWatch(watchId);watchId=null;$('gpsBadge').textContent='אין הרשאת מיקום';$('gpsBadge').className='bad';updatePerm();showPerm(true);return}
+    $('gpsBadge').textContent=gps?'קליטה חלשה — מחפש לוויינים…':'מחפש קליטת GPS…';$('gpsBadge').className='mid';
+    gpsRetry=setTimeout(()=>startGPS(true),4000);
+  },{enableHighAccuracy:true,maximumAge:0,timeout:15000});
+}
+function setBadgeQ(acc){const b=$('gpsBadge');b.className=acc<=15?'good':acc<=40?'mid':'bad'}
+/* watchdog: if fixes stop arriving while the app is open, restart the watch */
+setInterval(()=>{if(sim||document.hidden||gpsDenied||!lastFix)return;if(Date.now()-lastFix>20000){$('gpsBadge').textContent='אין עדכון GPS — מאתחל…';$('gpsBadge').className='mid';lastFix=Date.now();startGPS(true)}},5000);
+/* keep the screen on while navigating: browsers pause GPS when the screen locks */
+let wake=null;
+async function keepAwake(on){try{if(on&&'wakeLock'in navigator){if(!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>{wake=null})}}else if(!on&&wake){await wake.release();wake=null}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){if(nav)notify('הניווט מושהה','כשהאפליקציה ברקע הדפדפן עוצר את ה-GPS. חזור לאפליקציה והשאר את המסך דולק.')}
+  else{if(!gpsDenied)startGPS(true);if(nav)keepAwake(true);updatePerm()}
+});
+function onPos(ll,acc,kmh){
+    const first=!gps;gps=ll;gpsAcc=acc;gpsKmh=kmh;
+    $('gpsBadge').textContent=(sim?'סימולציה':'דיוק ±'+Math.round(gpsAcc)+' מ\'')+(gpsKmh!=null?' · '+Math.round(gpsKmh)+' קמ"ש':'');setBadgeQ(sim?5:gpsAcc);
+    if(!meMk){meMk=L.marker(gps,{icon:L.divIcon({className:'',html:'<div class="me"></div>',iconSize:[20,20],iconAnchor:[10,10]}),zIndexOffset:1000}).addTo(meL);accC=L.circle(gps,{radius:gpsAcc,color:'#2563eb',weight:1,fillOpacity:.12,interactive:false}).addTo(meL)}
+    else{meMk.setLatLng(gps);accC.setLatLng(gps).setRadius(gpsAcc)}
+    if(follow||first)map.setView(gps,Math.max(map.getZoom(),16),{animate:!first});
+    if(first)$('locBtn').classList.add('on');
+    updatePresets();geofence(gps);if(nav)navTick(gps);
+}
+/* ride simulation: feeds fake positions along the route at ~18 km/h, time-compressed x4 */
+let sim=null;
+function startSim(){
+  ensureAudio();
+  if(!route){toast('קודם בחר יעד וחשב מסלול');return}
+  if(nav)stopNav();
+  const pts=route.pts.slice();let seg=1,pos=pts[0];
+  sim={timer:null};$('simBtn').textContent='עצור הדגמה';follow=true;
+  onPos(pos,5,18);startNav();
+  sim.timer=setInterval(()=>{
+    let step=8;
+    while(step>0&&seg<pts.length){const d=dist(pos,pts[seg]);if(d<=step){step-=d;pos=pts[seg];seg++}else{const q=xy(pts[seg],pos);pos=unxy([q[0]/d*step,q[1]/d*step],pos);step=0}}
+    onPos(pos,5,seg>=pts.length?0:18);
+    if(seg>=pts.length||!nav)stopSim();
+  },400);
+}
+function stopSim(){if(!sim)return;clearInterval(sim.timer);sim=null;$('simBtn').textContent='הדגמת רכיבה (סימולציה)';$('gpsBadge').textContent='הסימולציה הסתיימה'}
+$('locBtn').addEventListener('click',()=>{ensureAudio();follow=true;$('locBtn').classList.add('on');if(gps)map.setView(gps,17);else startGPS()});
+
+/* ================= ALERTS ================= */
+let actx=null;
+function ensureAudio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch(e){}if('speechSynthesis'in window&&!ensureAudio.primed){ensureAudio.primed=1;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}}
+function tone(freqs,type,vol){if(!actx)return;const t=actx.currentTime;freqs.forEach((f,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=f;const s=t+i*.24;g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(vol,s+.02);g.gain.exponentialRampToValueAtTime(.0001,s+.2);o.connect(g).connect(actx.destination);o.start(s);o.stop(s+.22)})}
+let heVoice=null;
+function pickVoice(){try{heVoice=speechSynthesis.getVoices().find(v=>/^(he|iw)/i.test(v.lang))||null}catch(e){}}
+if('speechSynthesis'in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+function speak(t,urgent){if(!S.voice||!('speechSynthesis'in window))return;try{if(urgent)speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='he-IL';if(heVoice)u.voice=heVoice;u.rate=1.02;speechSynthesis.speak(u)}catch(e){}}
+let swReg=null;
+if('serviceWorker'in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){navigator.serviceWorker.register('sw.js').then(r=>{swReg=r}).catch(()=>{})}
+function notify(title,body){
+  if(!('Notification'in window)||Notification.permission!=='granted')return false;
+  const o={body,tag:'scooter-alert',renotify:true,lang:'he',dir:'rtl',vibrate:[300,100,300],icon:ICON.png192||undefined};
+  if(swReg&&swReg.showNotification){swReg.showNotification(title,o).catch(()=>{});return true}
+  try{new Notification(title,o);return true}catch(e){return false}
+}
+$('voiceChk').checked=S.voice;
+$('voiceChk').addEventListener('change',e=>{S.voice=e.target.checked;save();if(!S.voice&&'speechSynthesis'in window)speechSynthesis.cancel()});
+$('testVoice').addEventListener('click',()=>{ensureAudio();pickVoice();speak('בדיקת קול. הניווט הקולי בעברית פעיל.',true);if(!heVoice)toast('לא נמצא קול עברי מותקן במכשיר — ההקראה עשויה להישמע במבטא זר. התקן קול עברי בהגדרות הטקסט לדיבור.',6000)});
+
+let gpsKmh=null;
+const gf={lastRed:0,inGray:new Set(),inSlow:new Set(),lastHw:0,lastFast:0};
+function geofence(pos){
+  const zs=activeZones();let minRed=Infinity,redName='',slowNow=false;
+  for(const z of zs){const P=z.p.map(q=>xy(q,pos)),ins=pip([0,0],P);
+    if(z.t==='NO_RIDE'){const d=ins?0:nearestOn([0,0],P)[1];if(d<(z.near||80)&&d<minRed){minRed=d;redName=z.name}}
+    else if(z.t==='SLOW_ZONE'){if(ins){slowNow=true;if(!gf.inSlow.has(z.id)){gf.inSlow.add(z.id);tone([440,440],'sine',.2);toast('אזור האטה: '+z.name+' — עד 15 קמ"ש',4000);speak('נכנסת לאזור האטה. מהירות מרבית עשר עד חמש עשרה קמ"ש.')}}else gf.inSlow.delete(z.id)}
+    else if(z.t==='NO_PARKING'){if(ins&&!gf.inGray.has(z.id)){gf.inGray.add(z.id);grayAlert(z)}else if(!ins&&gf.inGray.has(z.id)){gf.inGray.delete(z.id);if(!gf.inGray.size)$('grayBanner').style.display='none'}}
+  }
+  const rb=$('redBanner');
+  if(slowNow&&gpsKmh!=null&&gpsKmh>16&&Date.now()-gf.lastFast>30000){gf.lastFast=Date.now();tone([660,660,660],'square',.25);try{navigator.vibrate&&navigator.vibrate([200,80,200])}catch(e){}speak('האט! אתה באזור האטה, נוסע '+Math.round(gpsKmh)+' קמ"ש',true)}
+  if(minRed<Infinity){rb.textContent=minRed===0?'אתה בתוך אזור אסור: '+redName:'אזהרה! '+Math.round(minRed)+' מ\' מאזור אסור — '+redName;rb.style.display='block';
+    if(Date.now()-gf.lastRed>20000){gf.lastRed=Date.now();tone([880,660,880],'square',.3);try{navigator.vibrate&&navigator.vibrate([300,100,300])}catch(e){}
+      notify('אזהרה — אזור אסור',redName);speak('אזהרה! אתה מתקרב לאזור אסור לכניסה, סטייה לכיוון האזור המותר',true)}}
+  else rb.style.display='none';
+  let hw=Infinity;for(const h of HIGHWAYS){const d=nearestOn([0,0],h.p.map(q=>xy(q,pos)),false)[1];if(d<hw)hw=d}
+  if(hw<25&&Date.now()-gf.lastHw>60000){gf.lastHw=Date.now();tone([700,700],'triangle',.2);speak('זהירות, דרך מהירה בקרבת מקום. אסור לרכוב עליה.')}
+}
+function grayAlert(z){const g=$('grayBanner');g.textContent='נכנסת לאזור אסור לחניה חופשית ('+z.name+'). ניתן לנסוע; בסיום חונים רק בנקודת P כחולה.';g.style.display='block';
+  tone([523,659],'sine',.2);try{navigator.vibrate&&navigator.vibrate(150)}catch(e){}notify('אזור אסור לחניה חופשית',z.name);
+  speak('נכנסת לאזור אסור לחניה חופשית. ניתן לנסוע, אך בסיום הרכיבה יש לחנות בנקודת P כחולה בלבד')}
+
+/* ================= VOICE NAVIGATION ================= */
+function turnAt(pts,i){if(i>=pts.length-1)return'הגעה ליעד';const b1=bearing(pts[i-1],pts[i]),b2=bearing(pts[i],pts[i+1]);const df=((b2-b1+540)%360)-180,a=Math.abs(df);
+  if(a<25)return'המשך ישר';if(a>150)return'בצע פניית פרסה';return df>0?(a>60?'פנה ימינה':'פנה קלות ימינה'):(a>60?'פנה שמאלה':'פנה קלות שמאלה')}
+const r10=d=>Math.max(10,Math.round(d/10)*10);
+function startNav(){
+  if(!route)return;ensureAudio();
+  askNotif();
+  startGPS();follow=true;keepAwake(true);
+  nav={pts:route.pts.slice(),i:1,said:{},lastRe:0};
+  $('navBtn').textContent='עצור ניווט';$('navBtn').classList.replace('go','warn');$('navBanner').style.display='block';$('sheet').classList.add('min');setTimeout(()=>map.invalidateSize(),50);
+  const d=pathLen(nav.pts);
+  speak('מתחילים ניווט. אורך המסלול '+(d<1000?r10(d)+' מטר':(d/1000).toFixed(1)+' קילומטר')+'. '+(nav.pts.length>2?'בנקודת הציון הראשונה '+turnAt(nav.pts,1):'סע ישר אל היעד'),true);
+  updBanner(gps?dist(gps,nav.pts[1]):pathLen(nav.pts));
+}
+function stopNav(msg){nav=null;keepAwake(false);$('navBtn').textContent='התחל ניווט קולי';$('navBtn').classList.replace('warn','go');$('navBanner').style.display='none';if(msg)toast(msg,4000)}
+$('navBtn').addEventListener('click',()=>{if(nav){stopNav();stopSim()}else startNav()});
+$('simBtn').addEventListener('click',()=>sim?(stopNav(),stopSim()):startSim());
+function updBanner(d){if(!nav)return;const last=nav.i===nav.pts.length-1;
+  $('navBig').textContent=(last?'יעד':turnAt(nav.pts,nav.i))+' בעוד '+fmt(d);
+  const rem=d+pathLen(nav.pts.slice(nav.i));$('navSub').textContent='נותרו '+fmt(rem)+(last?'':' · נקודת ציון '+nav.i+' מתוך '+(nav.pts.length-2))}
+function navTick(pos){
+  let pts=nav.pts,last=nav.i===pts.length-1,d=dist(pos,pts[nav.i]);
+  if(d<(last?20:18)){
+    if(last){const inGray=zonesAt(pos,'NO_PARKING').length;speak('הגעת ליעד. '+(inGray?'זכור: חנה רק בנקודת P כחולה.':'אפשר לסיים את הנסיעה ולחנות.'),true);stopNav('הגעת ליעד');return}
+    nav.i++;last=nav.i===pts.length-1;d=dist(pos,pts[nav.i]);
+    speak(last?'המשך אל היעד, עוד '+r10(d)+' מטר':'המשך '+r10(d)+' מטר, ואז '+turnAt(pts,nav.i),true);
+  }
+  const k=nav.i,ins=last?'תגיע ליעד':turnAt(pts,k);
+  if(d<60&&!nav.said[k+'n']){nav.said[k+'n']=1;nav.said[k+'f']=1;speak('בעוד '+r10(d)+' מטר '+ins)}
+  else if(d<220&&d>=60&&!nav.said[k+'f']){nav.said[k+'f']=1;speak('בעוד '+r10(d)+' מטר '+ins)}
+  const a=xy(pts[k-1],pos),b=xy(pts[k],pos),q=onSeg([0,0],a,b),off=Math.hypot(q[0],q[1]);
+  if(off>70&&Date.now()-nav.lastRe>20000){nav.lastRe=Date.now();const r=plan(pos,pts[pts.length-1]);
+    if(r){speak('סטית מהמסלול. מחשב מסלול חדש',true);nav.pts=r.pts;nav.i=1;nav.said={};route={pts:r.pts,fixed:false,tm:route?route.tm:'bicycling'};drawRoute(r.notes,r.detour);map.setView(pos,17)}}
+  updBanner(d);
+}
+
+/* ================= EDITOR ================= */
+$('typeSeg').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;drawType=b.dataset.t;document.querySelectorAll('#typeSeg button').forEach(x=>x.setAttribute('aria-pressed',x===b));renderDraft()});
+$('drawBtn').addEventListener('click',()=>{drawPts=[];setMode('draw');$('drawCtl').style.display='flex';renderDraft();setTimeout(()=>$('sheet').classList.remove('min'),0)});
+$('addPBtn').addEventListener('click',()=>setMode('park'));
+$('undoBtn').addEventListener('click',()=>{drawPts.pop();renderDraft()});
+$('cancelBtn').addEventListener('click',endDraw);
+$('finishBtn').addEventListener('click',()=>{if(drawPts.length<3){toast('צריך לפחות 3 נקודות');return}
+  const name=$('nameIn').value.trim()||({NO_RIDE:'אזור אדום',NO_PARKING:'אזור אפור',ALLOWED:'אזור תכלת'}[drawType])+' שלי '+(S.userZones.length+1);
+  S.userZones.push({id:'uz'+Date.now(),name,type:drawType,c:S.company==='all'?ALLC.slice():[S.company],p:drawPts.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])});
+  save();$('nameIn').value='';endDraw();toast('האזור נשמר');if(route&&!route.fixed)compute(true)});
+function endDraw(){drawPts=[];editL.clearLayers();$('drawCtl').style.display='none';setMode(null);$('sheet').classList.remove('min')}
+function renderDraft(){editL.clearLayers();if(mode!=='draw')return;const c=TI[drawType].c;
+  if(drawPts.length>1)L.polygon(drawPts,{color:c,fillColor:c,fillOpacity:.25,dashArray:'5 5',interactive:false}).addTo(editL);
+  drawPts.forEach(p=>L.circleMarker(p,{radius:5,color:'#fff',weight:2,fillColor:c,fillOpacity:1,interactive:false}).addTo(editL))}
+function renderMyList(){
+  const z=S.userZones.map(x=>`<div><span><b style="color:${TI[x.type].c}">●</b> ${esc(x.name)} <small>(${esc(x.c.map(c=>COMP[c]).join(', '))})</small></span><button class="btn sm" data-act="delzone" data-id="${esc(x.id)}">מחק</button></div>`);
+  const p=S.userP.map(x=>`<div><span><b style="color:#4338ca">P</b> ${esc(x.name)}</span><button class="btn sm" data-act="delp" data-id="${esc(x.id)}">מחק</button></div>`);
+  $('myList').innerHTML=(z.concat(p).join('')||'<p class="note">עוד לא הוספת אזורים או נקודות חניה.</p>')+(S.disabled.length?`<p class="note">${S.disabled.length} אזורים מובנים מושבתים.</p>`:'');
+}
+const exportObj=()=>({app:'scooter-nav',version:1,exported:new Date().toISOString(),userZones:S.userZones,userP:S.userP,disabled:S.disabled});
+$('expBtn').addEventListener('click',()=>{$('jsonTa').value=JSON.stringify(exportObj(),null,1)});
+$('copyBtn').addEventListener('click',async()=>{const t=JSON.stringify(exportObj());$('jsonTa').value=t;try{await navigator.clipboard.writeText(t);toast('הועתק ללוח')}catch(e){$('jsonTa').select();toast('סמן והעתק ידנית')}});
+$('dlBtn').addEventListener('click',()=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(exportObj(),null,1)],{type:'application/json'}));a.download='scooter-zones.json';document.body.appendChild(a);a.click();a.remove()}catch(e){toast('ההורדה נחסמה — השתמש ב"העתק"')}});
+function importText(t){try{const o=JSON.parse(t);if(!o||!Array.isArray(o.userZones||[])||!Array.isArray(o.userP||[]))throw 0;
+  const okZ=z=>z&&typeof z.id==='string'&&TI[z.type]&&Array.isArray(z.p)&&z.p.length>=3&&z.p.every(p=>Array.isArray(p)&&isFinite(p[0])&&isFinite(p[1]))&&Array.isArray(z.c);
+  const okP=p=>p&&typeof p.id==='string'&&Array.isArray(p.ll)&&isFinite(p.ll[0])&&isFinite(p.ll[1]);
+  S.userZones=(o.userZones||[]).filter(okZ).map(z=>({...z,name:String(z.name||'אזור'),c:z.c.filter(c=>ALLC.includes(c))}));
+  S.userP=(o.userP||[]).filter(okP).map(p=>({...p,name:String(p.name||'חניה')}));
+  S.disabled=(o.disabled||[]).filter(x=>typeof x==='string');save();drawAll();toast('יובאו '+S.userZones.length+' אזורים ו-'+S.userP.length+' נקודות P')}catch(e){toast('קובץ JSON לא תקין')}}
+$('impBtn').addEventListener('click',()=>importText($('jsonTa').value));
+$('fileIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{$('jsonTa').value=t;importText(t)});e.target.value=''});
+$('restoreBtn').addEventListener('click',()=>{S.disabled=[];save();drawAll();toast('האזורים המובנים שוחזרו')});
+let resetArm=0;$('resetBtn').addEventListener('click',e=>{if(Date.now()-resetArm>4000){resetArm=Date.now();e.target.textContent='לחץ שוב לאישור';setTimeout(()=>e.target.textContent='מחק את כל הנתונים שלי',4000);return}
+  S.userZones=[];S.userP=[];S.disabled=[];save();drawAll();e.target.textContent='מחק את כל הנתונים שלי';toast('הנתונים נמחקו')});
+
+/* ================= delegated actions ================= */
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,id=b.dataset.id;
+  const ll=b.dataset.lat?[+b.dataset.lat,+b.dataset.lng]:null;
+  if(a==='disable'){S.disabled.push(id);save();map.closePopup();drawAll();toast('האזור הושבת — אפשר לשחזר בלשונית העריכה');if(route&&!route.fixed)compute(true)}
+  else if(a==='delzone'){S.userZones=S.userZones.filter(z=>z.id!==id);save();map.closePopup();drawAll();if(route&&!route.fixed)compute(true)}
+  else if(a==='delp'){S.userP=S.userP.filter(p=>p.id!==id);save();map.closePopup();drawAll()}
+  else if(a==='dest'||a==='res'){setDest(ll,b.dataset.name);map.closePopup();$('results').innerHTML='';map.setView(ll,16);compute()}
+  else if(a==='orig'){setOrigin(ll,b.dataset.name);map.closePopup();if(dest.ll)compute()}
+  else if(a==='closemodal'){$('modal').style.display='none';if(!S.onboarded){S.onboarded=true;save()}}
+  else if(a==='grant')grantAll();
+  else if(a==='perm')showPerm(false);
+  else if(a==='testnotif'){ensureAudio();askNotif().then(()=>{const ok=notify('בדיקת התראה','כך תיראה אזהרה לפני אזור אסור.');tone([880,660,880],'square',.3);try{navigator.vibrate&&navigator.vibrate([300,100,300])}catch(e){}speak('בדיקת התראה',true);toast(ok?'נשלחה התראת מערכת':'התראות מערכת לא זמינות כאן — צליל, רטט וקול כן פועלים',4500)})}
+});
+
+/* ================= PWA ================= */
+const ICON_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0f172a"/><circle cx="160" cy="370" r="44" fill="none" stroke="#38bdf8" stroke-width="28"/><circle cx="360" cy="370" r="44" fill="none" stroke="#38bdf8" stroke-width="28"/><path d="M160 370H322L296 150M260 150H334" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/><circle cx="150" cy="170" r="38" fill="#e11d48"/></svg>';
+const ICON={svg:'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(ICON_SVG),png192:null};
+function toPng(size){return new Promise(res=>{const img=new Image();img.onload=()=>{try{const c=document.createElement('canvas');c.width=c.height=size;c.getContext('2d').drawImage(img,0,0,size,size);res(c.toDataURL('image/png'))}catch(e){res(null)}};img.onerror=()=>res(null);img.src=ICON.svg})}
+(async()=>{
+  try{const r=await fetch('manifest.webmanifest',{method:'HEAD',cache:'no-store'});if(r.ok){$('manifestLink').href='manifest.webmanifest';$('appleIcon').href='icon-192.png';ICON.png192='icon-192.png';return}}catch(e){}
+  const p192=await toPng(192),p512=await toPng(512);ICON.png192=p192;
+  const base=location.href.split('#')[0];let scope=base;try{scope=new URL('./',base).href}catch(e){}
+  const icons=[];if(p192)icons.push({src:p192,sizes:'192x192',type:'image/png'});if(p512)icons.push({src:p512,sizes:'512x512',type:'image/png',purpose:'any maskable'});icons.push({src:ICON.svg,sizes:'any',type:'image/svg+xml'});
+  const m={name:'ניווט קורקינט חכם',short_name:'ניווט קורקינט',lang:'he',dir:'rtl',start_url:base,scope,display:'standalone',orientation:'portrait',background_color:'#0f172a',theme_color:'#0f172a',icons};
+  $('manifestLink').href=URL.createObjectURL(new Blob([JSON.stringify(m)],{type:'application/manifest+json'}));
+  $('appleIcon').href=p192||ICON.svg;
+})();
+let deferredPrompt=null;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+if(standalone())$('installBtn').style.display='none';
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e});
+window.addEventListener('appinstalled',()=>{$('installBtn').style.display='none';toast('האפליקציה הותקנה')});
+$('installBtn').addEventListener('click',async()=>{
+  if(deferredPrompt){deferredPrompt.prompt();try{await deferredPrompt.userChoice}catch(e){}deferredPrompt=null;return}
+  if(isIOS)modal('<h3>התקנה באייפון</h3><ol><li>פתח את הדף ב-Safari.</li><li>הקש על <b>כפתור השיתוף</b> (ריבוע עם חץ למעלה).</li><li>בחר <b>"הוסף למסך הבית"</b> ואשר.</li></ol>');
+  else modal('<h3>התקנה למסך הבית</h3><ol><li>פתח את תפריט הדפדפן (⋮).</li><li>בחר <b>"התקן אפליקציה"</b> או <b>"הוסף למסך הבית"</b>.</li></ol><p class="note">ההתקנה זמינה רק כשהקובץ מוגש בכתובת https.</p>');
+});
+
+/* ================= PERMISSIONS ================= */
+let geoState='prompt';
+try{navigator.permissions&&navigator.permissions.query({name:'geolocation'}).then(st=>{geoState=st.state;updatePerm();st.onchange=()=>{geoState=st.state;updatePerm();if(st.state==='granted')startGPS(true)}}).catch(()=>{})}catch(e){}
+const notifState=()=>!('Notification'in window)?'unsupported':Notification.permission;
+async function askNotif(){try{if('Notification'in window&&Notification.permission==='default'){await Notification.requestPermission()}}catch(e){}updatePerm()}
+function updatePerm(){
+  const g=gpsDenied||geoState==='denied'?'denied':(gps||geoState==='granted')?'granted':'prompt',n=notifState();
+  const t={granted:'פעיל',denied:'חסום',prompt:'לא אושר',default:'לא אושר',unsupported:'לא נתמך בדפדפן'};
+  $('permRow').innerHTML=`<span class="pst ${g}">מיקום: ${t[g]}</span><span class="pst ${n==='granted'?'granted':n==='denied'?'denied':'prompt'}">התראות: ${t[n]}</span>`+
+   (g!=='granted'||n==='default'||n==='denied'?'<button class="btn sm" type="button" data-act="perm">הפעל הרשאות</button>':'')+'<button class="btn sm" type="button" data-act="testnotif">בדיקת התראה</button>';
+}
+function showPerm(denied){
+  const g=gpsDenied||geoState==='denied',iosNoPwa=isIOS&&!standalone();
+  let h='<h3>הרשאות לניווט</h3><p style="margin:0 0 8px">כדי שהאפליקציה תאתר אותך בזמן אמת ותתריע לפני אזורים אסורים, צריך לאשר:</p><ol><li><b>מיקום מדויק</b> — חובה לניווט ולהתראות האזורים.</li><li><b>התראות</b> — אזהרת מערכת עם רטט, שמופיעה גם בשעון חכם מחובר.</li><li><b>קול</b> — מופעל בלחיצה על הכפתור.</li></ol>';
+  if(g)h+='<p style="color:var(--red);font-weight:700;margin:0 0 6px">הגישה למיקום חסומה. הפעל אותה ידנית:</p><ol>'+(isIOS?'<li>הגדרות ← פרטיות ואבטחה ← שירותי מיקום ← Safari (או האפליקציה) ← "בעת השימוש".</li><li>הפעל גם את "מיקום מדויק".</li><li>חזור לאפליקציה ורענן.</li>':'<li>הקש על סמל המנעול / ההגדרות ליד כתובת האתר ← הרשאות ← מיקום ← "אפשר".</li><li>בהגדרות הטלפון ← מיקום: ודא ש"דיוק מיקום של Google" / "מיקום מדויק" פעיל.</li><li>חזור לאפליקציה.</li>')+'</ol>';
+  if(iosNoPwa)h+='<p class="note">באייפון התראות מערכת עובדות רק אחרי "הוסף למסך הבית" ופתיחה מהאייקון (iOS 16.4 ומעלה).</p>';
+  h+='<p class="note">דפדפנים עוצרים את ה-GPS כשהמסך נכבה או כשעוברים לאפליקציה אחרת. בזמן ניווט המסך יישאר דולק אוטומטית — השאר את האפליקציה פתוחה.</p>';
+  $('modalBox').innerHTML=h+'<button class="btn pri" type="button" data-act="grant" style="width:100%;margin-bottom:8px">אפשר מיקום והתראות</button><button class="btn" type="button" data-act="closemodal" style="width:100%">אחר כך</button>';
+  $('modal').style.display='flex';
+}
+async function grantAll(){
+  ensureAudio();
+  startGPS(true);
+  if(navigator.geolocation&&!gps){navigator.geolocation.getCurrentPosition(()=>{},()=>{},{enableHighAccuracy:true,maximumAge:0,timeout:15000})}
+  await askNotif();
+  S.onboarded=true;save();$('modal').style.display='none';
+  speak('ההרשאות הופעלו. מחפש את המיקום שלך.',true);
+}
+
+/* ================= PRICES ================= */
+const num=n=>n.toFixed(n%1?1:0);
+function renderPrices(){
+  $('priceList').innerHTML=PRICES.map(p=>`<div class="price"><div class="hd"><b>${esc(p.name)}</b><span class="rate"><strong><bdi dir="ltr">${p.min[0].toFixed(2)}–${p.min[1].toFixed(2)}</bdi> ₪</strong> לדקה</span></div><p>פתיחה: ${esc(p.openTxt)} · ${esc(p.pass)}</p>${p.ins?'<span class="tag">כולל ביטוח צד ג\'</span>':''}</div>`).join('');
+}
+function renderCalc(){
+  const m=Math.ceil(Math.max(1,+$('cMin').value||1)),n=Math.max(1,Math.round(+$('cRides').value||1));
+  const rows=PRICES.map(p=>({n:p.name,lo:(p.open[0]+m*p.min[0])*n,hi:(p.open[1]+m*p.min[1])*n,openShare:p.open[1]/(p.open[1]+m*p.min[1])}));
+  const mx=Math.max(...rows.map(r=>r.hi));
+  const share=Math.round(rows.find(r=>r.n==='Lime').openShare*100);
+  $('calcOut').innerHTML=`<div class="note" style="margin:0 0 6px">${n} × ${m} דק' ביום (מעוגל מעלה). דמי הפתיחה הם כ-${share}% מהמחיר של כל נסיעה.</div>`+
+    rows.map(r=>`<div class="bar"><span>${esc(r.n)}</span><span class="tr"><i class="lo" style="width:${(r.hi/mx*100).toFixed(1)}%"></i><i style="width:${(r.lo/mx*100).toFixed(1)}%"></i></span><span><bdi dir="ltr">${num(r.lo)}–${num(r.hi)}</bdi> ₪</span></div>`).join('')+
+    (n>2||m<=5?'<div class="tip" style="margin-top:8px">לפי הנתונים שהזנת — כדאי לבדוק מנוי Pass.</div>':'');
+}
+$('cMin').addEventListener('input',renderCalc);$('cRides').addEventListener('input',renderCalc);
+try{const c=JSON.parse(localStorage.getItem(KEY+'-calc')||'null');if(c){$('cMin').value=c.m;$('cRides').value=c.n}}catch(e){}
+['cMin','cRides'].forEach(id=>$(id).addEventListener('change',()=>{try{localStorage.setItem(KEY+'-calc',JSON.stringify({m:$('cMin').value,n:$('cRides').value}))}catch(e){}}));
+renderPrices();renderCalc();
+
+/* ================= INIT ================= */
+renderChips();drawAll();updatePresets();
+/* first launch: ask for location immediately, then show the permissions card */
+startGPS();updatePerm();
+if(!S.onboarded)setTimeout(()=>showPerm(false),400);
+if(location.protocol==='file:')toast('פתוח כקובץ מקומי — GPS והתקנה דורשים אירוח ב-https',6000);
+}
+</script>
+</body>
+</html>
